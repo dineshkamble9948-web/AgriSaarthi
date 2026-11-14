@@ -1,0 +1,32 @@
+
+# Node.js
+node_modules/
+frontend/dist/
+backend/node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Machine learning datasets
+ml-service/*/dataset/
+ml-service/*/models/
+
+# Large model files
+*.h5
+*.keras
+*.pkl
+*.joblib
+
+# Windows and editor files
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
