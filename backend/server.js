@@ -18,14 +18,30 @@ import soilRoutes from "./routes/soilRoutes.js";
 dotenv.config({ path: resolve(dirname(fileURLToPath(import.meta.url)), ".env") });
 
 const app = express();
-const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+const configuredOrigins = (process.env.CLIENT_URL || "")
   .split(",")
-  .map((origin) => origin.trim())
+  .map((origin) => origin.trim().replace(/\/+$/, ""))
   .filter(Boolean);
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // allow requests with no origin (like curl, mobile, server-to-server)
+      if (!origin) return callback(null, true);
+
+      const normalizedOrigin = origin.replace(/\/+$/, "");
+      const isAllowed =
+        configuredOrigins.includes("*") ||
+        configuredOrigins.includes(normalizedOrigin) ||
+        normalizedOrigin.endsWith(".onrender.com") ||
+        normalizedOrigin.includes("localhost") ||
+        normalizedOrigin.includes("127.0.0.1");
+
+      if (isAllowed) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true
   })
 );
