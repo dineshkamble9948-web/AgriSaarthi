@@ -1,0 +1,76 @@
+services:
+  # 1. FastAPI ML Service
+  - type: web
+    name: agrisaarthi-ml
+    runtime: python
+    rootDir: ml-service
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /docs
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: MODEL_PATH
+        value: crop_model.pkl
+
+  # 2. Node.js Express Backend
+  - type: web
+    name: agrisaarthi-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: PORT
+        value: 10000
+      - key: CLIENT_URL
+        fromService:
+          type: web
+          name: agrisaarthi-frontend
+          property: url
+      - key: ML_API_URL
+        fromService:
+          type: web
+          name: agrisaarthi-ml
+          property: url
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: OPENWEATHER_API_KEY
+        sync: false
+      - key: PLANTNET_API_KEY
+        sync: false
+      - key: CDSE_CLIENT_ID
+        sync: false
+      - key: CDSE_CLIENT_SECRET
+        sync: false
+
+  # 3. React Frontend (Static Site)
+  - type: web
+    name: agrisaarthi-frontend
+    runtime: static
+    rootDir: frontend
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: agrisaarthi-backend
+          property: url
