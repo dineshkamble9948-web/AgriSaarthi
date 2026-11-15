@@ -1,37 +1,156 @@
 
-import { useState } from "react";
-import { Sprout, MapPin, Ruler, Droplets } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Sprout, MapPin, Ruler, Droplets, LocateFixed, Undo2, Trash2 } from "lucide-react";
 import api from "../services/api";
+import FarmLocationMap from "../components/FarmLocationMap";
+import {
+  calculatePolygonAreaSquareMeters,
+  geoJSONToPolygonPath,
+  polygonPathToGeoJSON
+} from "../utils/geospatial";
 
-export default function FarmSetup({ onFarmSaved }) {
-  const [form, setForm] = useState({
-    farmName: "",
-    location: "",
-    state: "Karnataka",
-    area: "",
-    areaUnit: "acres",
-    soilType: "Red",
-    ph: "",
-    nitrogen: "",
-    phosphorus: "",
-    potassium: "",
-    waterSource: "Borewell"
-  });
+const SQUARE_METERS_PER_ACRE = 4046.8564224;
+const SQUARE_METERS_PER_HECTARE = 10000;
+
+export default function FarmSetup({
+  onFarmSaved,
+  existingFarm = null,
+  createNewFarm = false,
+  embedded = false,
+  onCancel
+}) {
+  const [form, setForm] = useState(() => ({
+    farmName: existingFarm?.farmName || "",
+    location: existingFarm?.location || "",
+    state: existingFarm?.state || "Karnataka",
+    district: existingFarm?.district || "",
+    area: existingFarm?.area == null ? "" : String(existingFarm.area),
+    areaUnit: existingFarm?.areaUnit || "acres",
+    soilType: existingFarm?.soilType || "Red",
+    ph: existingFarm?.ph == null ? "" : String(existingFarm.ph),
+    nitrogen: existingFarm?.nitrogen == null ? "" : String(existingFarm.nitrogen),
+    phosphorus: existingFarm?.phosphorus == null ? "" : String(existingFarm.phosphorus),
+    potassium: existingFarm?.potassium == null ? "" : String(existingFarm.potassium),
+    waterSource: existingFarm?.waterSource || "Borewell",
+    irrigationType: existingFarm?.irrigationType || "Unknown",
+    latitude: existingFarm?.latitude == null ? "" : String(existingFarm.latitude),
+    longitude: existingFarm?.longitude == null ? "" : String(existingFarm.longitude)
+  }));
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [locationError, setLocationError] = useState("");
+  const [boundaryPoints, setBoundaryPoints] = useState(
+    () => geoJSONToPolygonPath(existingFarm?.boundary)
+  );
+  const [drawingBoundary, setDrawingBoundary] = useState(false);
+  const areaSquareMeters = useMemo(
+    () => calculatePolygonAreaSquareMeters(boundaryPoints),
+    [boundaryPoints]
+  );
+
+  const updateCenter = ([latitude, longitude]) => {
+    setForm((current) => ({
+      ...current,
+      latitude: latitude.toFixed(6),
+      longitude: longitude.toFixed(6)
+    }));
+    setLocationError("");
+  };
+
+  const areaFromBoundary = (squareMeters, unit) => {
+    const divisor = unit === "hectares" ? SQUARE_METERS_PER_HECTARE : SQUARE_METERS_PER_ACRE;
+    return squareMeters > 0 ? (squareMeters / divisor).toFixed(2) : "";
+  };
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setForm((current) => ({
+      ...current,
+      [name]: name === "areaUnit" && areaSquareMeters >= 0.01
+        ? areaFromBoundary(areaSquareMeters, value)
+        : value
+    }));
+  };
+
+  const requestFarmLocation = () => {
+    setLocationError("");
+    if (!navigator.geolocation) {
+      setLocationError("Location access is not available in this browser. You can enter coordinates or select the map manually.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => updateCenter([coords.latitude, coords.longitude]),
+      (geoError) => {
+        const message = geoError.code === geoError.PERMISSION_DENIED
+          ? "Location permission was not granted. You can enter coordinates or select the map manually."
+          : "Could not read your current location. You can enter coordinates or select the map manually.";
+        setLocationError(message);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
+
+  const handleMapClick = (position) => {
+    if (drawingBoundary) {
+      setBoundaryPoints((points) => [...points, position]);
+      if (!form.latitude || !form.longitude) {
+        updateCenter(position);
+      }
+      return;
+    }
+
+    updateCenter(position);
+  };
+
+  const handleCoordinateChange = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+    setLocationError("");
+  };
+
+  const finishBoundary = () => {
+    if (boundaryPoints.length < 3) {
+      setError("Mark at least three points on the map to define a farm boundary.");
+      return;
+    }
+
+    setDrawingBoundary(false);
+    setError("");
+    setForm((current) => ({
+      ...current,
+      area: areaFromBoundary(areaSquareMeters, current.areaUnit)
+    }));
+  };
+
+  const clearBoundary = () => {
+    setBoundaryPoints([]);
+    setDrawingBoundary(false);
+    setForm((current) => ({
+      ...current,
+      area: areaSquareMeters > 0 ? "" : current.area
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     setError("");
+    const latitude = form.latitude === "" ? null : Number(form.latitude);
+    const longitude = form.longitude === "" ? null : Number(form.longitude);
+    if ((latitude === null) !== (longitude === null)) {
+      setError("Enter both latitude and longitude, or leave both blank.");
+      return;
+    }
+    if (
+      (latitude !== null && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90))
+      || (longitude !== null && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180))
+    ) {
+      setError("Latitude must be between -90 and 90 and longitude between -180 and 180.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -41,7 +160,12 @@ export default function FarmSetup({ onFarmSaved }) {
         ph: form.ph === "" ? null : Number(form.ph),
         nitrogen: form.nitrogen === "" ? null : Number(form.nitrogen),
         phosphorus: form.phosphorus === "" ? null : Number(form.phosphorus),
-        potassium: form.potassium === "" ? null : Number(form.potassium)
+        potassium: form.potassium === "" ? null : Number(form.potassium),
+        latitude,
+        longitude,
+        boundary: polygonPathToGeoJSON(boundaryPoints),
+        ...(existingFarm?._id ? { farmId: existingFarm._id } : {}),
+        ...(createNewFarm ? { createNew: true } : {})
       });
 
       onFarmSaved(response.data.farm);
@@ -57,9 +181,9 @@ export default function FarmSetup({ onFarmSaved }) {
   };
 
   return (
-    <div className="farm-setup-page">
+    <div className={`farm-setup-page${embedded ? " farm-setup-page-embedded" : ""}`}>
 
-      <form className="farm-setup-card" onSubmit={handleSubmit}>
+      <form className={`farm-setup-card${embedded ? " farm-setup-card-embedded" : ""}`} onSubmit={handleSubmit}>
 
         <div className="farm-setup-logo">
           <Sprout size={26} />
@@ -68,11 +192,12 @@ export default function FarmSetup({ onFarmSaved }) {
 
         <span className="welcome-label">YOUR FARM PROFILE</span>
 
-        <h1>Let's set up your farm</h1>
+        <h1>{existingFarm ? "Edit farm details" : createNewFarm ? "Add another farm" : "Let's set up your farm"}</h1>
 
         <p className="farm-setup-description">
-          Enter your farm information to receive personalized
-          agricultural recommendations.
+          {existingFarm
+            ? "Update this farm's location, boundary, and profile."
+            : "Enter your farm information to receive personalized agricultural recommendations."}
         </p>
 
         <div className="farm-form-grid">
@@ -106,6 +231,16 @@ export default function FarmSetup({ onFarmSaved }) {
               value={form.state}
               onChange={handleChange}
               required
+            />
+          </div>
+
+          <div className="farm-input-group">
+            <label>District</label>
+            <input
+              name="district"
+              value={form.district}
+              onChange={handleChange}
+              placeholder="Optional"
             />
           </div>
 
@@ -160,7 +295,124 @@ export default function FarmSetup({ onFarmSaved }) {
             </select>
           </div>
 
+          <div className="farm-input-group">
+            <label>Irrigation Type</label>
+            <select
+              name="irrigationType"
+              value={form.irrigationType}
+              onChange={handleChange}
+            >
+              {["Unknown", "Drip", "Sprinkler", "Flood", "Rainfed", "Other"].map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+
         </div>
+
+        <section className="farm-location-section">
+          <div className="soil-section-heading">
+            <MapPin size={20} />
+            <div>
+              <strong>Farm Location &amp; Boundaries</strong>
+              <span>Optional. Use GPS, enter coordinates, or select your farm on the map.</span>
+            </div>
+          </div>
+
+          <button type="button" className="farm-location-action" onClick={requestFarmLocation}>
+            <LocateFixed size={16} />
+            Use my current location
+          </button>
+
+          <div className="farm-form-grid farm-coordinate-grid">
+            <div className="farm-input-group">
+              <label htmlFor="farm-latitude">Latitude</label>
+              <input
+                id="farm-latitude"
+                type="number"
+                name="latitude"
+                min="-90"
+                max="90"
+                step="any"
+                value={form.latitude}
+                onChange={handleCoordinateChange}
+                placeholder="e.g. 12.9716"
+              />
+            </div>
+            <div className="farm-input-group">
+              <label htmlFor="farm-longitude">Longitude</label>
+              <input
+                id="farm-longitude"
+                type="number"
+                name="longitude"
+                min="-180"
+                max="180"
+                step="any"
+                value={form.longitude}
+                onChange={handleCoordinateChange}
+                placeholder="e.g. 77.5946"
+              />
+            </div>
+          </div>
+          {locationError && <p className="farm-location-message">{locationError}</p>}
+
+          <FarmLocationMap
+            center={form.latitude !== "" && form.longitude !== ""
+              ? [Number(form.latitude), Number(form.longitude)]
+              : null}
+            boundaryPath={boundaryPoints}
+            onCenterChange={updateCenter}
+            onMapClick={handleMapClick}
+          />
+
+          <div className="farm-boundary-actions">
+            {!drawingBoundary ? (
+              <button
+                type="button"
+                className="farm-location-action"
+                onClick={() => {
+                  setBoundaryPoints([]);
+                  setDrawingBoundary(true);
+                  setError("");
+                }}
+              >
+                <MapPin size={16} />
+                {boundaryPoints.length >= 3 ? "Redraw boundary" : "Draw farm boundary"}
+              </button>
+            ) : (
+              <>
+                <button type="button" className="farm-location-action" onClick={finishBoundary}>
+                  <MapPin size={16} />
+                  Finish boundary
+                </button>
+                <button
+                  type="button"
+                  className="farm-location-action farm-location-action-secondary"
+                  onClick={() => setBoundaryPoints((points) => points.slice(0, -1))}
+                  disabled={boundaryPoints.length === 0}
+                >
+                  <Undo2 size={16} />
+                  Undo point
+                </button>
+              </>
+            )}
+            {boundaryPoints.length > 0 && (
+              <button type="button" className="farm-location-action farm-location-action-secondary" onClick={clearBoundary}>
+                <Trash2 size={16} />
+                Clear boundary
+              </button>
+            )}
+          </div>
+          {drawingBoundary && (
+            <p className="farm-map-hint">Click the map to add boundary points. Add at least three points, then finish.</p>
+          )}
+          {areaSquareMeters > 0 && (
+            <p className="farm-area-estimate">
+              Approximate mapped area: {(areaSquareMeters / SQUARE_METERS_PER_ACRE).toFixed(2)} acres
+              {" "}({(areaSquareMeters / SQUARE_METERS_PER_HECTARE).toFixed(2)} hectares)
+            </p>
+          )}
+        </section>
 
         <div className="soil-section">
           <div className="soil-section-heading">
@@ -197,14 +449,21 @@ export default function FarmSetup({ onFarmSaved }) {
 
         {error && <div className="auth-error">{error}</div>}
 
-        <button
-          type="submit"
-          className="auth-submit"
-          disabled={loading}
-        >
-          {loading ? "Saving Farm..." : "Save Farm & Continue"}
-          <MapPin size={18} />
-        </button>
+        <div className="farm-setup-actions">
+          {onCancel && (
+            <button type="button" className="secondary-button" onClick={onCancel} disabled={loading}>
+              Cancel
+            </button>
+          )}
+          <button
+            type="submit"
+            className="auth-submit"
+            disabled={loading}
+          >
+            {loading ? "Saving Farm..." : existingFarm ? "Save Farm Changes" : createNewFarm ? "Add Farm" : "Save Farm & Continue"}
+            <MapPin size={18} />
+          </button>
+        </div>
 
       </form>
 

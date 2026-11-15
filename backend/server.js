@@ -13,6 +13,7 @@ import diseaseRoutes from "./routes/diseaseRoutes.js";
 import marketRoutes from "./routes/marketRoutes.js";
 import cropRecommendationRoutes from "./routes/cropRecommendationRoutes.js";
 import weatherRoutes from "./routes/weatherRoutes.js";
+import soilRoutes from "./routes/soilRoutes.js";
 
 dotenv.config({ path: resolve(dirname(fileURLToPath(import.meta.url)), ".env") });
 
@@ -55,6 +56,7 @@ app.use("/api/disease", diseaseRoutes);
 app.use("/api/market", marketRoutes);
 app.use("/api/crops", cropRecommendationRoutes);
 app.use("/api/weather", weatherRoutes);
+app.use("/api/soil", soilRoutes);
 
 app.use((err, req, res, next) => {
   console.error("Unhandled server error:", err);

@@ -104,6 +104,79 @@ const normalizeWeather = (place, current, forecast) => {
     };
   });
 
+  const normalizedCurrent = {
+    temperatureC: current.main?.temp ?? null,
+    feelsLikeC: current.main?.feels_like ?? null,
+    humidityPercent: current.main?.humidity ?? null,
+    windSpeedKph: Number.isFinite(current.wind?.speed)
+      ? Math.round(current.wind.speed * 3.6 * 10) / 10
+      : null,
+    windDirectionDegrees: current.wind?.deg ?? null,
+    rainfallLastHourMm: current.rain?.["1h"] ?? 0,
+    pressureHPa: current.main?.pressure ?? null,
+    uvIndex: null,
+    condition: conditionFrom(current.weather?.[0]),
+    observedAt: toIsoString(current.dt),
+    sunriseAt: toIsoString(current.sys?.sunrise),
+    sunsetAt: toIsoString(current.sys?.sunset)
+  };
+  const hourly = entries.slice(0, 8).map((entry) => ({
+    time: toIsoString(entry.dt),
+    temperatureC: entry.main?.temp ?? null,
+    precipitationProbabilityPercent: Number.isFinite(entry.pop)
+      ? Math.round(entry.pop * 100)
+      : null,
+    rainfallMm: entry.rain?.["3h"] ?? 0,
+    condition: conditionFrom(entry.weather?.[0])
+  }));
+  const alerts = [];
+  const heavyRainDay = daily.find((day) => day.rainfallMm >= 25);
+  if (heavyRainDay) {
+    alerts.push({
+      type: "heavy_rain",
+      severity: "warning",
+      title: "Heavy rainfall possible",
+      message: `The forecast estimates ${Math.round(heavyRainDay.rainfallMm)} mm of rain on ${heavyRainDay.date.slice(0, 10)}. This is a forecast-based alert, not an official warning.`
+    });
+  }
+
+  const hotDay = daily.find((day) => day.temperatureMaxC >= 35);
+  if (hotDay) {
+    alerts.push({
+      type: "high_temperature",
+      severity: "warning",
+      title: "High temperature forecast",
+      message: "Forecast temperatures reach 35°C or higher. Check crop-specific heat guidance and monitor the field."
+    });
+  }
+
+  const forecastRainfall = hourly.reduce((total, hour) => total + hour.rainfallMm, 0);
+  const forecastRainChance = Math.max(
+    0,
+    ...hourly.map((hour) => hour.precipitationProbabilityPercent ?? 0)
+  );
+  if (
+    normalizedCurrent.windSpeedKph >= 15
+    || normalizedCurrent.rainfallLastHourMm > 0
+    || forecastRainChance >= 50
+  ) {
+    alerts.push({
+      type: "spraying_conditions",
+      severity: "caution",
+      title: "Conditions may be unsuitable for spraying",
+      message: "Wind, recent rain, or forecast rain may affect spray application. Check the product label and local conditions before spraying."
+    });
+  }
+
+  if (hourly.length >= 4 && forecastRainfall < 2 && forecastRainChance < 30) {
+    alerts.push({
+      type: "possible_irrigation",
+      severity: "info",
+      title: "Check whether irrigation is needed",
+      message: "Little rain is forecast in the next 24 hours. Check the crop and soil before irrigating; no soil-moisture sensor reading is available."
+    });
+  }
+
   return {
     source: "OpenWeather Current Weather and 5-day/3-hour Forecast",
     fetchedAt: new Date().toISOString(),
@@ -115,66 +188,23 @@ const normalizeWeather = (place, current, forecast) => {
       longitude: place.lon,
       timezoneOffsetSeconds
     },
-    current: {
-      temperatureC: current.main?.temp ?? null,
-      feelsLikeC: current.main?.feels_like ?? null,
-      humidityPercent: current.main?.humidity ?? null,
-      windSpeedKph: Number.isFinite(current.wind?.speed)
-        ? Math.round(current.wind.speed * 3.6 * 10) / 10
-        : null,
-      windDirectionDegrees: current.wind?.deg ?? null,
-      rainfallLastHourMm: current.rain?.["1h"] ?? 0,
-      pressureHPa: current.main?.pressure ?? null,
-      uvIndex: null,
-      condition: conditionFrom(current.weather?.[0]),
-      observedAt: toIsoString(current.dt),
-      sunriseAt: toIsoString(current.sys?.sunrise),
-      sunsetAt: toIsoString(current.sys?.sunset)
-    },
-    hourly: entries.slice(0, 8).map((entry) => ({
-      time: toIsoString(entry.dt),
-      temperatureC: entry.main?.temp ?? null,
-      precipitationProbabilityPercent: Number.isFinite(entry.pop)
-        ? Math.round(entry.pop * 100)
-        : null,
-      rainfallMm: entry.rain?.["3h"] ?? 0,
-      condition: conditionFrom(entry.weather?.[0])
-    })),
+    current: normalizedCurrent,
+    hourly,
     daily,
-    alerts: []
+    alerts
   };
 };
 
-export const getWeatherForLocation = async (location, state, apiKey) => {
-  const search = [location, state].filter(Boolean).join(", ");
-  const cacheKey = search.toLocaleLowerCase();
+const getWeatherAtCoordinates = async (latitude, longitude, apiKey, place, cacheKey) => {
   const cached = weatherCache.get(cacheKey);
 
   if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
     return { ...cached.weather, cacheHit: true };
   }
 
-  const geocodingParams = new URLSearchParams({
-    q: search,
-    limit: "1",
-    appid: apiKey
-  });
-  const places = await fetchProviderJson(
-    `https://api.openweathermap.org/geo/1.0/direct?${geocodingParams.toString()}`,
-    "geocoding"
-  );
-  if (!Array.isArray(places)) {
-    throw new WeatherProviderError("The weather provider returned invalid location data.", 502);
-  }
-  const place = places[0];
-
-  if (!place || !Number.isFinite(place.lat) || !Number.isFinite(place.lon)) {
-    throw new WeatherProviderError("Could not find coordinates for the farm location.", 404);
-  }
-
   const weatherParams = new URLSearchParams({
-    lat: String(place.lat),
-    lon: String(place.lon),
+    lat: String(latitude),
+    lon: String(longitude),
     units: "metric",
     appid: apiKey
   });
@@ -205,4 +235,59 @@ export const getWeatherForLocation = async (location, state, apiKey) => {
   weatherCache.set(cacheKey, { weather, cachedAt: Date.now() });
 
   return { ...weather, cacheHit: false };
+};
+
+export const getWeatherForCoordinates = async (latitude, longitude, apiKey, placeName = "Farm location") => {
+  if (
+    !Number.isFinite(Number(latitude))
+    || Number(latitude) < -90
+    || Number(latitude) > 90
+    || !Number.isFinite(Number(longitude))
+    || Number(longitude) < -180
+    || Number(longitude) > 180
+  ) {
+    throw new WeatherProviderError("Latitude must be between -90 and 90 and longitude between -180 and 180.", 400);
+  }
+
+  const lat = Number(latitude);
+  const lon = Number(longitude);
+  const place = {
+    name: String(placeName || "Farm location"),
+    state: "",
+    country: "",
+    lat,
+    lon
+  };
+  const cacheKey = `coordinates:${lat.toFixed(4)},${lon.toFixed(4)}`;
+  return getWeatherAtCoordinates(lat, lon, apiKey, place, cacheKey);
+};
+
+export const getWeatherForLocation = async (location, state, apiKey) => {
+  const search = [location, state].filter(Boolean).join(", ");
+  const cacheKey = `location:${search.toLocaleLowerCase()}`;
+  const cached = weatherCache.get(cacheKey);
+
+  if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+    return { ...cached.weather, cacheHit: true };
+  }
+
+  const geocodingParams = new URLSearchParams({
+    q: search,
+    limit: "1",
+    appid: apiKey
+  });
+  const places = await fetchProviderJson(
+    `https://api.openweathermap.org/geo/1.0/direct?${geocodingParams.toString()}`,
+    "geocoding"
+  );
+  if (!Array.isArray(places)) {
+    throw new WeatherProviderError("The weather provider returned invalid location data.", 502);
+  }
+  const place = places[0];
+
+  if (!place || !Number.isFinite(place.lat) || !Number.isFinite(place.lon)) {
+    throw new WeatherProviderError("Could not find coordinates for the farm location.", 404);
+  }
+
+  return getWeatherAtCoordinates(place.lat, place.lon, apiKey, place, cacheKey);
 };

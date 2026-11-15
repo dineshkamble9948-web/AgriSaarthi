@@ -58,6 +58,10 @@ function App() {
     setActivePage("Dashboard");
   };
 
+  const handleFarmUpdated = (updatedFarm) => {
+    setFarm(updatedFarm);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("agrisaarthi_token");
     setToken(null);
@@ -108,7 +112,12 @@ function App() {
         ) : activePage === "Farm History" ? (
           <FarmHistory />
         ) : (
-          <ModulePage page={activePage} setActivePage={setActivePage} farm={farm} />
+          <ModulePage
+            page={activePage}
+            setActivePage={setActivePage}
+            farm={farm}
+            onFarmUpdated={handleFarmUpdated}
+          />
         )}
 
         <footer className="app-footer">

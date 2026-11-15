@@ -3,6 +3,8 @@ import { Component, useCallback, useEffect, useMemo, useState } from "react";
 import api from "../services/api";
 import useWeather from "../hooks/useWeather";
 import formatWeatherTime from "../utils/formatWeatherTime";
+import SoilIntelligence from "./SoilIntelligence";
+import DigitalTwinDashboard from "./DigitalTwinDashboard";
 import {
   Bar,
   BarChart,
@@ -60,18 +62,18 @@ const moduleDetails = {
   },
   "Farm Digital Twin": {
     icon: MapIcon,
-    description: "Create a digital view of your farmland and key operational metrics.",
-    features: ["Farm area", "Crop status", "Soil health", "Water availability"]
+    description: "Monitor mapped farms and plots alongside real weather, soil, crop, satellite, and irrigation data.",
+    features: ["GPS location and farm boundaries", "Weather and soil history", "Crop lifecycle monitoring", "Sentinel-2 vegetation and irrigation guidance"]
   },
   "What-If Simulation": {
     icon: Calculator,
-    description: "Compare farming decisions before choosing your next crop or action.",
-    features: ["Scenario changes", "Profit estimate", "Water impact", "Comparison output"]
+    description: "Compare estimated crop returns using mandi prices and editable farm assumptions.",
+    features: ["Crop-by-crop mandi prices", "Yield and cost assumptions", "Water and disease-risk comparison", "Revenue and profit estimates"]
   },
   "Next Best Action": {
     icon: Lightbulb,
-    description: "Receive personalized farming recommendations based on your farm conditions.",
-    features: ["Priority advice", "Timing suggestions", "Risk warning", "Action planning"]
+    description: "Get a prioritized action plan based on farm details, weather, farm history and mandi trends.",
+    features: ["Weather-informed irrigation review", "Crop inspection reminders", "Recent crop price movement", "Farm profile and activity follow-up"]
   },
   "Market Intelligence": {
     icon: TrendingUp,
@@ -536,71 +538,604 @@ function WeatherPanel({ farm }) {
 }
 
 function SoilPanel() {
-  return (
-    <div className="module-content-grid">
-      <div className="panel">
-        <h3>Soil profile</h3>
-        <ul className="module-bullets">
-          <li><strong>Soil pH:</strong> 6.4</li>
-          <li><strong>Nitrogen:</strong> 58 kg/ha</li>
-          <li><strong>Phosphorus:</strong> 32 kg/ha</li>
-          <li><strong>Potassium:</strong> 40 kg/ha</li>
-        </ul>
-      </div>
+  return <SoilIntelligence />;
+}
 
-      <div className="panel">
-        <h3>Fertilizer guidance</h3>
-        <p>For this nutrient profile, a balanced nitrogen boost and moderate phosphorus support are appropriate for maize or paddy. Avoid over-applying potassium unless the crop stage suggests it.</p>
-      </div>
+function DigitalTwinPanel({ farm, setActivePage, onFarmUpdated }) {
+  return (
+    <div className="digital-twin-module">
+      <DigitalTwinDashboard
+        farm={farm}
+        setActivePage={setActivePage}
+        onFarmUpdated={onFarmUpdated}
+      />
     </div>
   );
 }
 
-function DigitalTwinPanel() {
-  return (
-    <div className="stats-grid">
-      <div className="panel stat-card"><h3>Farm area</h3><p className="stat-big">6.5 acres</p></div>
-      <div className="panel stat-card"><h3>Crop status</h3><p className="stat-big">3 active</p></div>
-      <div className="panel stat-card"><h3>Soil health</h3><p className="stat-big">Healthy</p></div>
-      <div className="panel stat-card"><h3>Irrigation</h3><p className="stat-big">Drip system</p></div>
-    </div>
+const WHAT_IF_CROPS = ["Rice", "Wheat", "Tomato", "Onion", "Cotton", "Maize", "Groundnut"];
+const WHAT_IF_STATES = ["Maharashtra", "Uttar Pradesh", "Punjab", "Madhya Pradesh", "Karnataka"];
+const INITIAL_CROP_SCENARIOS = [
+  {
+    crop: "Tomato",
+    yieldTonsPerAcre: 8.2,
+    costPerAcre: 62000,
+    waterNeed: "High",
+    diseaseRisk: "Medium",
+    priceOverride: ""
+  },
+  {
+    crop: "Groundnut",
+    yieldTonsPerAcre: 2.1,
+    costPerAcre: 38000,
+    waterNeed: "Medium",
+    diseaseRisk: "Low",
+    priceOverride: ""
+  }
+];
+
+const averageModalPrice = (records) => {
+  if (!Array.isArray(records)) return null;
+  const prices = records
+    .map((record) => record?.modalPrice)
+    .filter((price) => typeof price === "number" && Number.isFinite(price) && price > 0);
+  if (!prices.length) return null;
+  return Math.round((prices.reduce((sum, price) => sum + price, 0) / prices.length) * 100) / 100;
+};
+
+const formatScenarioCurrency = (value) => {
+  if (!Number.isFinite(value)) return "—";
+  const formatted = Math.abs(value).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+  return value < 0 ? `−₹${formatted}` : `₹${formatted}`;
+};
+
+function WhatIfPanel({ farm }) {
+  const initialAreaAcres = Number(farm?.area) > 0
+    ? Number(farm.area) * (farm.areaUnit === "hectares" ? 2.47105 : 1)
+    : 1;
+  const [areaAcres, setAreaAcres] = useState(initialAreaAcres);
+  const [marketState, setMarketState] = useState(
+    WHAT_IF_STATES.includes(farm?.state) ? farm.state : "Karnataka"
   );
-}
+  const [scenarios, setScenarios] = useState(INITIAL_CROP_SCENARIOS);
+  const [priceSnapshot, setPriceSnapshot] = useState({ key: "", byCrop: {} });
+  const scenarioKey = `${marketState}|${scenarios.map((scenario) => scenario.crop).join("|")}`;
+  const marketPrices = priceSnapshot.key === scenarioKey ? priceSnapshot.byCrop : {};
+  const pricesLoading = priceSnapshot.key !== scenarioKey;
 
-function WhatIfPanel() {
-  const [scenario, setScenario] = useState({ crop: "Rice", fertilizer: 70, water: 80, cost: 25000 });
-  const estimatedValue = Math.round((scenario.crop === "Rice" ? 3.2 : 2.8) * (scenario.water / 100) * 10000 + scenario.fertilizer * 25 - scenario.cost / 3);
+  useEffect(() => {
+    let active = true;
+    const [requestedState, ...requestedCrops] = scenarioKey.split("|");
+    const crops = Array.from(new Set(requestedCrops));
+
+    Promise.all(crops.map(async (crop) => {
+      try {
+        const response = await api.get("/market/prices", {
+          params: { state: requestedState, commodity: crop }
+        });
+        const records = Array.isArray(response?.data?.records) ? response.data.records : [];
+        const price = averageModalPrice(records);
+        return [crop, {
+          price,
+          count: records.filter((record) => (
+            typeof record?.modalPrice === "number"
+            && Number.isFinite(record.modalPrice)
+            && record.modalPrice > 0
+          )).length,
+          fetchedAt: typeof response?.data?.fetchedAt === "string" ? response.data.fetchedAt : "",
+          error: price === null ? `No reported modal price was found for ${crop} in ${requestedState}.` : ""
+        }];
+      } catch (requestError) {
+        return [crop, {
+          price: null,
+          count: 0,
+          fetchedAt: "",
+          error: requestError.response?.data?.message
+            || `Could not load a mandi price for ${crop}. Enter a price override to compare it.`
+        }];
+      }
+    })).then((entries) => {
+      if (active) setPriceSnapshot({ key: scenarioKey, byCrop: Object.fromEntries(entries) });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [scenarioKey]);
+
+  const updateScenario = (index, name, value) => {
+    setScenarios((current) => current.map((scenario, scenarioIndex) => (
+      scenarioIndex === index ? { ...scenario, [name]: value } : scenario
+    )));
+  };
+
+  const results = scenarios.map((scenario) => {
+    const manualPrice = scenario.priceOverride.trim() ? Number(scenario.priceOverride) : null;
+    const marketPrice = marketPrices[scenario.crop]?.price;
+    const pricePerQuintal = Number.isFinite(manualPrice) && manualPrice > 0
+      ? manualPrice
+      : marketPrice;
+    const area = Number(areaAcres);
+    const yieldTonsPerAcre = Number(scenario.yieldTonsPerAcre);
+    const costPerAcre = Number(scenario.costPerAcre);
+    const canEstimate = Number.isFinite(area)
+      && area > 0
+      && Number.isFinite(yieldTonsPerAcre)
+      && yieldTonsPerAcre >= 0
+      && Number.isFinite(costPerAcre)
+      && costPerAcre >= 0
+      && Number.isFinite(pricePerQuintal)
+      && pricePerQuintal > 0;
+    const totalYieldTons = yieldTonsPerAcre * area;
+    const estimatedRevenue = canEstimate ? totalYieldTons * 10 * pricePerQuintal : null;
+    const estimatedCost = canEstimate ? costPerAcre * area : null;
+
+    return {
+      ...scenario,
+      pricePerQuintal,
+      usesManualPrice: Number.isFinite(manualPrice) && manualPrice > 0,
+      totalYieldTons,
+      estimatedRevenue,
+      estimatedCost,
+      estimatedProfit: canEstimate ? estimatedRevenue - estimatedCost : null
+    };
+  });
+  const canRecommend = results.every((result) => Number.isFinite(result.estimatedProfit));
+  const preferredScenario = canRecommend
+    ? results[0].estimatedProfit === results[1].estimatedProfit
+      ? null
+      : results[0].estimatedProfit > results[1].estimatedProfit ? results[0] : results[1]
+    : null;
 
   return (
-    <div className="panel">
-      <h3>What-if simulation</h3>
-      <div className="module-form-grid">
-        <label>Crop<select value={scenario.crop} onChange={(e) => setScenario({ ...scenario, crop: e.target.value })}><option>Rice</option><option>Maize</option><option>Groundnut</option></select></label>
-        <label>Fertilizer (kg)<input type="number" value={scenario.fertilizer} onChange={(e) => setScenario({ ...scenario, fertilizer: Number(e.target.value) })} /></label>
-        <label>Water (%)<input type="number" value={scenario.water} onChange={(e) => setScenario({ ...scenario, water: Number(e.target.value) })} /></label>
-        <label>Cost (₹)<input type="number" value={scenario.cost} onChange={(e) => setScenario({ ...scenario, cost: Number(e.target.value) })} /></label>
-      </div>
-      <div className="risk-box"><strong>Estimated outcome:</strong> ₹{estimatedValue.toLocaleString()} net estimate based on transparent assumptions.</div>
-    </div>
-  );
-}
-
-function NextBestActionPanel() {
-  const actions = [
-    { priority: "High", reason: "Humidity is high; reduce drip timing by 15 minutes.", timing: "Today" },
-    { priority: "Medium", reason: "Review soil nutrition before next fertilizer application.", timing: "This week" },
-    { priority: "Low", reason: "Monitor pest activity after afternoon rain exposure.", timing: "3 days" }
-  ];
-
-  return (
-    <div className="panel">
-      <h3>Priority actions</h3>
-      {actions.map((action) => (
-        <div key={action.priority} className="recommendation-item">
-          <div className="recommendation-header"><strong>{action.priority}</strong><span>{action.timing}</span></div>
-          <p>{action.reason}</p>
+    <div className="what-if-dashboard">
+      <section className="panel">
+        <div className="what-if-heading">
+          <div>
+            <h3>Compare crop scenarios</h3>
+            <p>Use your yield and cost assumptions with recent mandi modal prices to estimate revenue and profit.</p>
+          </div>
+          <span className="market-source-badge">Mandi Price API</span>
         </div>
-      ))}
+        <div className="what-if-global-fields">
+          <label>
+            Area to simulate (acres)
+            <input
+              type="number"
+              min="0.01"
+              step="0.1"
+              value={areaAcres}
+              onChange={(event) => setAreaAcres(event.target.value)}
+            />
+          </label>
+          <label>
+            State for mandi prices
+            <select value={marketState} onChange={(event) => setMarketState(event.target.value)}>
+              {WHAT_IF_STATES.map((state) => <option key={state} value={state}>{state}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="what-if-scenario-grid">
+          {scenarios.map((scenario, index) => {
+            const priceInfo = marketPrices[scenario.crop];
+            const hasPriceOverride = scenario.priceOverride.trim() !== "";
+            return (
+              <section className={`what-if-scenario what-if-scenario-${index + 1}`} key={`scenario-${index}`}>
+                <h4>Option {index + 1}</h4>
+                <div className="what-if-fields">
+                  <label>
+                    Crop
+                    <select
+                      value={scenario.crop}
+                      onChange={(event) => updateScenario(index, "crop", event.target.value)}
+                    >
+                      {WHAT_IF_CROPS.map((crop) => <option key={crop} value={crop}>{crop}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Estimated yield (tonnes / acre)
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={scenario.yieldTonsPerAcre}
+                      onChange={(event) => updateScenario(index, "yieldTonsPerAcre", Number(event.target.value))}
+                    />
+                  </label>
+                  <label>
+                    Price override (₹ / quintal, optional)
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={scenario.priceOverride}
+                      placeholder={priceInfo?.price ? formatMandiPrice(priceInfo.price) : "Enter if unavailable"}
+                      onChange={(event) => updateScenario(index, "priceOverride", event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Estimated cost (₹ / acre)
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={scenario.costPerAcre}
+                      onChange={(event) => updateScenario(index, "costPerAcre", Number(event.target.value))}
+                    />
+                  </label>
+                  <label>
+                    Water requirement
+                    <select
+                      value={scenario.waterNeed}
+                      onChange={(event) => updateScenario(index, "waterNeed", event.target.value)}
+                    >
+                      {["Low", "Medium", "High"].map((level) => <option key={level} value={level}>{level}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Disease risk estimate
+                    <select
+                      value={scenario.diseaseRisk}
+                      onChange={(event) => updateScenario(index, "diseaseRisk", event.target.value)}
+                    >
+                      {["Low", "Medium", "High"].map((level) => <option key={level} value={level}>{level}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <p className="what-if-price-status" role="status">
+                  {hasPriceOverride
+                    ? "Using your manual price override."
+                    : pricesLoading
+                      ? `Loading recent ${scenario.crop} modal prices for ${marketState}...`
+                      : priceInfo?.price
+                        ? `Average of ${priceInfo.count} reported modal prices: ${formatMandiPrice(priceInfo.price)} / quintal.`
+                        : priceInfo?.error || "No market price available; enter a price override to calculate returns."}
+                </p>
+              </section>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="panel what-if-results">
+        <div className="what-if-heading">
+          <div>
+            <h3>Scenario comparison</h3>
+            <p>Estimated totals for {Number(areaAcres) > 0 ? Number(areaAcres).toLocaleString("en-IN") : "—"} acres.</p>
+          </div>
+          <span className="market-source-badge">₹ / quintal</span>
+        </div>
+        <div className="what-if-table-scroll">
+          <table className="what-if-table">
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                {results.map((result, index) => <th key={`heading-${index}`}>Option {index + 1}: {result.crop}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th>Expected yield</th>
+                {results.map((result, index) => (
+                  <td key={`yield-${index}`}>
+                    {Number.isFinite(result.totalYieldTons) ? `${result.totalYieldTons.toLocaleString("en-IN", { maximumFractionDigits: 1 })} tonnes total` : "—"}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <th>Water requirement</th>
+                {results.map((result, index) => <td key={`water-${index}`}>{result.waterNeed}</td>)}
+              </tr>
+              <tr>
+                <th>Disease risk</th>
+                {results.map((result, index) => <td key={`risk-${index}`}>{result.diseaseRisk}</td>)}
+              </tr>
+              <tr>
+                <th>Expected price</th>
+                {results.map((result, index) => (
+                  <td key={`price-${index}`}>
+                    {Number.isFinite(result.pricePerQuintal)
+                      ? `${formatMandiPrice(result.pricePerQuintal)} / quintal${result.usesManualPrice ? " · manual" : ""}`
+                      : "Unavailable"}
+                  </td>
+                ))}
+              </tr>
+              <tr>
+                <th>Estimated revenue</th>
+                {results.map((result, index) => <td key={`revenue-${index}`}>{formatScenarioCurrency(result.estimatedRevenue)}</td>)}
+              </tr>
+              <tr>
+                <th>Estimated cost</th>
+                {results.map((result, index) => <td key={`cost-${index}`}>{formatScenarioCurrency(result.estimatedCost)}</td>)}
+              </tr>
+              <tr className="what-if-profit-row">
+                <th>Estimated profit</th>
+                {results.map((result, index) => <td key={`profit-${index}`}>{formatScenarioCurrency(result.estimatedProfit)}</td>)}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        {preferredScenario ? (
+          <div className="what-if-recommendation" role="status">
+            <CheckCircle2 size={19} />
+            <p>
+              <strong>{preferredScenario.crop} has the higher estimated profit</strong> under the assumptions above.
+              It is marked {preferredScenario.waterNeed.toLocaleLowerCase()} water need and {preferredScenario.diseaseRisk.toLocaleLowerCase()} disease risk; compare those trade-offs before deciding.
+            </p>
+          </div>
+        ) : canRecommend ? (
+          <p className="what-if-note" role="status">Both options have the same estimated profit under the current assumptions.</p>
+        ) : (
+          <p className="what-if-note" role="status">Load a mandi price or enter a price override for both crops to compare profit.</p>
+        )}
+        <p className="what-if-disclaimer">
+          Example yields, costs, water needs, and disease risks are editable planning assumptions, not predictions.
+          Revenue uses reported modal prices (₹ / quintal) and 10 quintals per tonne; actual sale prices, yields, and costs may differ.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+function NextBestActionPanel({ farm }) {
+  const { weather, loading: weatherLoading, error: weatherError, retry: retryWeather } = useWeather(
+    farm?.location,
+    farm?.state
+  );
+  const [recordsState, setRecordsState] = useState({ loading: true, error: "", records: [] });
+  const [historyState, setHistoryState] = useState({ key: "", error: "", records: [] });
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    api.get("/records")
+      .then((response) => {
+        if (!active) return;
+        const records = Array.isArray(response?.data?.records)
+          ? response.data.records.filter((record) => record && typeof record === "object")
+          : [];
+        setRecordsState({ loading: false, error: "", records });
+      })
+      .catch((requestError) => {
+        if (active) {
+          setRecordsState({
+            loading: false,
+            error: requestError.response?.data?.message || "Farm history could not be loaded.",
+            records: []
+          });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [refreshKey]);
+
+  const latestRecord = useMemo(() => (
+    recordsState.records
+      .filter((record) => record.cropName)
+      .slice()
+      .sort((left, right) => (
+        new Date(right.date || right.createdAt).getTime()
+        - new Date(left.date || left.createdAt).getTime()
+      ))[0] || null
+  ), [recordsState.records]);
+  const currentCrop = latestRecord?.cropName || "";
+  const historyKey = farm?.state && currentCrop
+    ? `${farm.state}|${currentCrop}`
+    : "";
+
+  useEffect(() => {
+    if (!historyKey) return undefined;
+
+    let active = true;
+    const [requestedState, requestedCrop] = historyKey.split("|");
+    api.get("/market/prices/history", {
+      params: { state: requestedState, commodity: requestedCrop }
+    })
+      .then((response) => {
+        if (!active) return;
+        const records = Array.isArray(response?.data?.records)
+          ? response.data.records.filter((record) => record && typeof record === "object")
+          : [];
+        setHistoryState({ key: historyKey, error: "", records });
+      })
+      .catch((requestError) => {
+        if (active) {
+          setHistoryState({
+            key: historyKey,
+            error: requestError.response?.data?.message || "Market price history could not be loaded.",
+            records: []
+          });
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [historyKey, refreshKey]);
+
+  const marketHistory = historyState.key === historyKey ? historyState.records : [];
+  const orderedMarketHistory = marketHistory
+    .filter((record) => Number.isFinite(record.modalPrice) && dateForChart(record.arrivalDate))
+    .slice()
+    .sort((left, right) => dateForChart(left.arrivalDate).localeCompare(dateForChart(right.arrivalDate)));
+  const firstMarketPrice = orderedMarketHistory[0]?.modalPrice;
+  const latestMarketPrice = orderedMarketHistory[orderedMarketHistory.length - 1]?.modalPrice;
+  const marketChangePercent = orderedMarketHistory.length > 1 && firstMarketPrice > 0
+    ? ((latestMarketPrice - firstMarketPrice) / firstMarketPrice) * 100
+    : null;
+
+  const actions = useMemo(() => {
+    const items = [];
+    const todayForecast = weather?.daily?.[0];
+    const rainChance = Number(todayForecast?.precipitationProbabilityPercent);
+    const expectedRain = Number(todayForecast?.rainfallMm);
+    const humidity = Number(weather?.current?.humidityPercent);
+
+    if (!farm?.location) {
+      items.push({
+        priority: "Medium",
+        timing: "When available",
+        title: "Add your farm location",
+        detail: "A farm location is needed to generate weather-aware irrigation and crop-inspection reminders.",
+        source: "Farm profile",
+        icon: MapIcon
+      });
+    } else if (todayForecast && ((Number.isFinite(rainChance) && rainChance >= 60) || expectedRain >= 5)) {
+      items.push({
+        priority: "High",
+        timing: "Before the next irrigation",
+        title: "Review irrigation timing",
+        detail: `Today's forecast reports ${Number.isFinite(rainChance) ? `${rainChance}% rain chance` : "rain"}${Number.isFinite(expectedRain) ? ` and ${expectedRain} mm expected rainfall` : ""}. Check field moisture before watering; defer only if local conditions show it is not needed.`,
+        source: "5-day weather forecast",
+        icon: Droplets
+      });
+    }
+
+    if (Number.isFinite(humidity) && humidity >= 80) {
+      items.push({
+        priority: "Medium",
+        timing: "Today",
+        title: "Inspect crops for disease symptoms",
+        detail: `Relative humidity is ${humidity}%. Inspect leaves and stems; humidity alone does not confirm a disease, so identify symptoms before treating.`,
+        source: "Current weather",
+        icon: ShieldAlert
+      });
+    }
+
+    if (marketChangePercent !== null && Math.abs(marketChangePercent) >= 5) {
+      items.push({
+        priority: "Medium",
+        timing: "This week",
+        title: marketChangePercent > 0 ? `Review the rising ${currentCrop} price` : `Review the falling ${currentCrop} price`,
+        detail: `Reported modal prices changed ${marketChangePercent > 0 ? "+" : ""}${marketChangePercent.toFixed(1)}% across the available history (${formatMandiPrice(firstMarketPrice)} to ${formatMandiPrice(latestMarketPrice)} / quintal). Compare current local mandi quotes before selling.`,
+        source: "Mandi Price API history",
+        icon: TrendingUp
+      });
+    }
+
+    const missingSoilData = ["ph", "nitrogen", "phosphorus", "potassium"]
+      .filter((field) => farm?.[field] === null || farm?.[field] === undefined);
+    if (missingSoilData.length) {
+      items.push({
+        priority: "Medium",
+        timing: "When available",
+        title: "Add recent soil test readings",
+        detail: `The farm profile is missing ${missingSoilData.map((field) => field.toUpperCase()).join(", ")}. Adding test results can make future crop guidance more specific.`,
+        source: "Farm profile",
+        icon: Sprout
+      });
+    }
+
+    if (!latestRecord) {
+      items.push({
+        priority: "Low",
+        timing: "This week",
+        title: "Record the current crop and latest activity",
+        detail: "A recent planting or crop-care record helps connect future price and action suggestions to the right crop.",
+        source: "Farm History",
+        icon: History
+      });
+    }
+
+    if (weatherError && !weather) {
+      items.push({
+        priority: "Low",
+        timing: "When available",
+        title: "Weather data is unavailable",
+        detail: weatherError,
+        source: "Weather service",
+        icon: CloudSun
+      });
+    }
+
+    if (!items.length) {
+      items.push({
+        priority: "Low",
+        timing: "This week",
+        title: "Continue routine monitoring",
+        detail: "No elevated weather or market-price signals were found in the available data. Continue regular field checks and update farm records.",
+        source: "Current farm signals",
+        icon: CheckCircle2
+      });
+    }
+
+    const priorityOrder = { High: 0, Medium: 1, Low: 2 };
+    return items.sort((left, right) => priorityOrder[left.priority] - priorityOrder[right.priority]);
+  }, [
+    currentCrop,
+    farm,
+    firstMarketPrice,
+    latestMarketPrice,
+    marketChangePercent,
+    latestRecord,
+    weather,
+    weatherError
+  ]);
+
+  const refreshSignals = () => {
+    setRefreshKey((current) => current + 1);
+    retryWeather();
+  };
+
+  return (
+    <div className="next-action-dashboard">
+      <section className="panel next-action-toolbar">
+        <div>
+          <h3>Next-best-action plan</h3>
+          <p>Suggested priorities for the next 7 days, based on the farm profile, weather, history and available mandi trends.</p>
+        </div>
+        <button className="secondary-button" type="button" onClick={refreshSignals}>
+          Refresh signals
+        </button>
+      </section>
+
+      {(recordsState.error || historyState.key === historyKey && historyState.error) && (
+        <p className="next-action-source-warning" role="status">
+          {[recordsState.error, historyState.key === historyKey ? historyState.error : ""].filter(Boolean).join(" ")}
+        </p>
+      )}
+
+      <section className="panel next-action-plan">
+        <div className="what-if-heading">
+          <div>
+            <h3>Suggested action plan</h3>
+            <p>
+              {[farm?.location, farm?.state, currentCrop ? `Current crop: ${currentCrop}` : ""]
+                .filter(Boolean)
+                .join(" · ") || "Add farm details to personalize this plan."}
+            </p>
+          </div>
+          {(recordsState.loading || weatherLoading || (historyKey && historyState.key !== historyKey)) && (
+            <span className="status-pill" role="status">Updating farm signals...</span>
+          )}
+        </div>
+        <div className="next-action-list">
+          {actions.map((action, index) => {
+            const Icon = action.icon;
+            return (
+              <article className="next-action-card" key={`${action.title}-${index}`}>
+                <div className="next-action-icon"><Icon size={20} /></div>
+                <div className="next-action-copy">
+                  <div className="next-action-card-heading">
+                    <strong>{action.title}</strong>
+                    <span className={`next-action-priority priority-${action.priority.toLocaleLowerCase()}`}>
+                      {action.priority}
+                    </span>
+                  </div>
+                  <p>{action.detail}</p>
+                  <small>{action.timing} · Source: {action.source}</small>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+        <p className="next-action-disclaimer">
+          These are decision-support reminders from available farm data, not diagnoses or guaranteed prescriptions.
+          Confirm field conditions and local agronomic guidance before acting.
+        </p>
+      </section>
     </div>
   );
 }
@@ -1330,7 +1865,7 @@ const moduleContentMap = {
   "Market Intelligence": MarketPanel
 };
 
-export default function ModulePage({ page, setActivePage, farm }) {
+export default function ModulePage({ page, setActivePage, farm, onFarmUpdated }) {
   const module = moduleDetails[page];
 
   if (!module) {
@@ -1371,6 +1906,8 @@ export default function ModulePage({ page, setActivePage, farm }) {
           <MarketPanelErrorBoundary key={page}>
             <Content farm={farm} />
           </MarketPanelErrorBoundary>
+        ) : page === "Farm Digital Twin" ? (
+          <Content farm={farm} setActivePage={setActivePage} onFarmUpdated={onFarmUpdated} />
         ) : (
           <Content farm={farm} />
         )

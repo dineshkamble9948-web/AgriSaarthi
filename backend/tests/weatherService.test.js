@@ -2,10 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  getWeatherForCoordinates,
   getWeatherForLocation,
   WeatherProviderError
 } from "../services/weatherService.js";
-import { getWeather } from "../controllers/weatherController.js";
+import { getWeather, getWeatherHistory } from "../controllers/weatherController.js";
+import fallbackStore, {
+  isFallbackMode,
+  setFallbackMode,
+  upsertFarm
+} from "../config/fallbackStore.js";
 
 test("weather service normalizes forecast and caches successful location requests", async (t) => {
   const originalFetch = globalThis.fetch;
@@ -73,8 +79,73 @@ test("weather service normalizes forecast and caches successful location request
   assert.equal(result.current.rainfallLastHourMm, 1.2);
   assert.equal(result.hourly.length, 8);
   assert.equal(result.daily.length, 5);
-  assert.deepEqual(result.alerts, []);
+  assert.deepEqual(result.alerts.map((alert) => alert.type), ["spraying_conditions"]);
   assert.equal(cachedResult.cacheHit, true);
+});
+
+test("weather service uses coordinates directly and caches successful responses", async (t) => {
+  const originalFetch = globalThis.fetch;
+  let requestCount = 0;
+  globalThis.fetch = async (url) => {
+    requestCount += 1;
+    assert.match(String(url), /lat=12\.5/);
+    assert.match(String(url), /lon=77\.5/);
+
+    if (String(url).includes("/data/2.5/weather?")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          dt: 1_800_000_000,
+          main: { temp: 29, humidity: 68 },
+          wind: { speed: 2 },
+          weather: [{ main: "Clear", description: "clear sky" }]
+        })
+      };
+    }
+
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        city: { timezone: 0 },
+        list: Array.from({ length: 8 }, (_, index) => ({
+          dt: 1_800_000_000 + index * 10_800,
+          main: { temp: 28 },
+          pop: 0,
+          weather: [{ main: "Clear", description: "clear sky" }]
+        }))
+      })
+    };
+  };
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const result = await getWeatherForCoordinates(12.5, 77.5, "test-key", "Test Farm");
+  const cachedResult = await getWeatherForCoordinates(12.5, 77.5, "test-key", "Test Farm");
+  assert.equal(requestCount, 2);
+  assert.equal(result.location.latitude, 12.5);
+  assert.equal(result.location.longitude, 77.5);
+  assert.equal(result.location.name, "Test Farm");
+  assert.equal(result.alerts[0].type, "possible_irrigation");
+  assert.equal(cachedResult.cacheHit, true);
+});
+
+test("weather coordinate lookup rejects out-of-range values before requesting the provider", async (t) => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new Error("The provider must not be called for invalid coordinates.");
+  };
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  await assert.rejects(
+    getWeatherForCoordinates(90.1, 0, "test-key"),
+    (error) => error instanceof WeatherProviderError
+      && error.statusCode === 400
+  );
 });
 
 test("weather service reports rejected provider credentials clearly", async (t) => {
@@ -165,3 +236,93 @@ test("weather route asks for server-side key configuration without exposing cred
   assert.equal(response.statusCode, 503);
   assert.match(response.body.message, /OPENWEATHER_API_KEY/);
 });
+
+test("farm weather requests save and return owner-scoped weather history", async (t) => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env.OPENWEATHER_API_KEY;
+  const previousFallbackMode = isFallbackMode();
+  const ownerId = "weather-history-owner";
+  setFallbackMode(true);
+  process.env.OPENWEATHER_API_KEY = "test-key";
+  const farm = upsertFarm(ownerId, {
+    farmName: "Weather History Farm",
+    location: "Test Village",
+    state: "Test State",
+    area: 1,
+    areaUnit: "acres",
+    latitude: 12.51,
+    longitude: 77.51
+  });
+
+  globalThis.fetch = async (url) => {
+    if (String(url).includes("/data/2.5/weather?")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          dt: 1_800_000_000,
+          main: { temp: 28, humidity: 65 },
+          wind: { speed: 1 },
+          weather: [{ main: "Clear", description: "clear sky" }]
+        })
+      };
+    }
+
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        city: { timezone: 0 },
+        list: Array.from({ length: 8 }, (_, index) => ({
+          dt: 1_800_000_000 + index * 10_800,
+          main: { temp: 27 },
+          pop: 0,
+          weather: [{ main: "Clear", description: "clear sky" }]
+        }))
+      })
+    };
+  };
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+    setFallbackMode(previousFallbackMode);
+    fallbackStore.farms = fallbackStore.farms.filter((item) => item._id !== farm._id);
+    fallbackStore.weatherHistory = fallbackStore.weatherHistory.filter((item) => item.farm !== farm._id);
+    if (originalKey === undefined) {
+      delete process.env.OPENWEATHER_API_KEY;
+    } else {
+      process.env.OPENWEATHER_API_KEY = originalKey;
+    }
+  });
+
+  const weatherResponse = createResponse();
+  await getWeather({
+    user: { _id: ownerId },
+    query: { farmId: farm._id }
+  }, weatherResponse);
+  assert.equal(weatherResponse.statusCode, 200);
+  assert.equal(weatherResponse.body.weather.location.latitude, 12.51);
+  assert.equal(fallbackStore.weatherHistory.length, 1);
+
+  const historyResponse = createResponse();
+  await getWeatherHistory({
+    user: { _id: ownerId },
+    query: { farmId: farm._id }
+  }, historyResponse);
+  assert.equal(historyResponse.statusCode, 200);
+  assert.equal(historyResponse.body.history.length, 1);
+});
+
+function createResponse() {
+  return {
+    statusCode: 200,
+    body: null,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(payload) {
+      this.body = payload;
+      return this;
+    }
+  };
+}

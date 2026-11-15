@@ -7,7 +7,7 @@ const farmSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true
+      index: true
     },
 
     farmName: {
@@ -25,6 +25,44 @@ const farmSchema = new mongoose.Schema(
     state: {
       type: String,
       default: "Karnataka"
+    },
+
+    village: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    district: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    latitude: {
+      type: Number,
+      min: -90,
+      max: 90,
+      default: null
+    },
+
+    longitude: {
+      type: Number,
+      min: -180,
+      max: 180,
+      default: null
+    },
+
+    boundary: {
+      type: {
+        type: String,
+        enum: ["Polygon"],
+        default: undefined
+      },
+      coordinates: {
+        type: [[[Number]]],
+        default: undefined
+      }
     },
 
     area: {
@@ -82,12 +120,20 @@ const farmSchema = new mongoose.Schema(
     waterSource: {
       type: String,
       default: "Unknown"
+    },
+
+    irrigationType: {
+      type: String,
+      enum: ["Drip", "Sprinkler", "Flood", "Rainfed", "Other", "Unknown"],
+      default: "Unknown"
     }
   },
   {
     timestamps: true
   }
 );
+
+farmSchema.index({ owner: 1, createdAt: 1 });
 
 const Farm = mongoose.model("Farm", farmSchema);
 

@@ -4,22 +4,25 @@ import AgriculturalRecord from "../models/AgriculturalRecord.js";
 import {
   createRecordEntry,
   deleteRecordEntry,
+  findFarmByIdAndOwner,
   getFarmByOwner,
   isFallbackMode,
   listRecordsByOwner,
   updateRecordEntry
 } from "../config/fallbackStore.js";
 
-const getUserFarm = async (userId) => {
+const getUserFarm = async (userId, farmId = "") => {
   if (isFallbackMode()) {
+    if (farmId) return findFarmByIdAndOwner(farmId, userId);
     return getFarmByOwner(userId);
   }
+  if (farmId) return Farm.findOne({ _id: farmId, owner: userId });
   return Farm.findOne({ owner: userId });
 };
 
 export const createRecord = async (req, res) => {
   try {
-    const { activityType, cropName, date, quantity, unit, cost, notes } = req.body;
+    const { activityType, cropName, date, quantity, unit, cost, notes, farmId } = req.body;
 
     if (!activityType || !cropName || !date) {
       return res.status(400).json({
@@ -28,7 +31,14 @@ export const createRecord = async (req, res) => {
       });
     }
 
-    const farm = await getUserFarm(req.user._id);
+    if (farmId !== undefined && (typeof farmId !== "string" || farmId.length > 100)) {
+      return res.status(400).json({
+        success: false,
+        message: "Farm ID is invalid."
+      });
+    }
+
+    const farm = await getUserFarm(req.user._id, farmId);
 
     if (!farm) {
       return res.status(404).json({
@@ -64,6 +74,12 @@ export const createRecord = async (req, res) => {
     });
   } catch (error) {
     console.error("Create agricultural record error:", error);
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "Farm ID is invalid."
+      });
+    }
     return res.status(500).json({
       success: false,
       message: "Could not create agricultural record."
@@ -73,14 +89,27 @@ export const createRecord = async (req, res) => {
 
 export const getRecords = async (req, res) => {
   try {
-    const { activityType, cropName } = req.query;
+    const { activityType, cropName, farmId } = req.query;
+    if (farmId !== undefined && (
+      typeof farmId !== "string"
+      || !farmId.trim()
+      || farmId.length > 100
+    )) {
+      return res.status(400).json({
+        success: false,
+        message: "Farm ID is invalid."
+      });
+    }
 
     let records = [];
 
     if (isFallbackMode()) {
-      records = listRecordsByOwner(req.user._id);
+      records = listRecordsByOwner(req.user._id, farmId);
     } else {
       const filter = { owner: req.user._id };
+      if (farmId) {
+        filter.farm = farmId;
+      }
 
       if (activityType) {
         filter.activityType = activityType;
@@ -110,6 +139,12 @@ export const getRecords = async (req, res) => {
     });
   } catch (error) {
     console.error("Get agricultural records error:", error);
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "Farm ID is invalid."
+      });
+    }
     return res.status(500).json({
       success: false,
       message: "Could not fetch agricultural records."

@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test",
     "dev": "node --watch server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "migrate:farms": "node scripts/migrateFarmIndexes.js"
   },
   "keywords": [],
   "author": "",
