@@ -23,6 +23,7 @@ import {
 import StatCard from "../components/StatCard";
 import useWeather from "../hooks/useWeather";
 import formatWeatherTime from "../utils/formatWeatherTime";
+import { useLanguage } from "../utils/LanguageContext";
 
 const yieldData = [
   { month: "Jan", yield: 2.2 },
@@ -35,6 +36,7 @@ const yieldData = [
 ];
 
 export default function Dashboard({ setActivePage, farm, user }) {
+  const { t } = useLanguage();
   const farmName = farm?.farmName || "My Farm";
   const farmLocation = farm?.location || "Farm location";
   const stateName = farm?.state || "Karnataka";
@@ -50,9 +52,9 @@ export default function Dashboard({ setActivePage, farm, user }) {
     <div className="dashboard">
       <section className="welcome-section">
         <div>
-          <span className="welcome-label">FARM OVERVIEW</span>
-          <h1>Good day, {user?.name?.split(" ")[0] || "Farmer"}! 👋</h1>
-          <p>Here is what is happening with {farmName} today.</p>
+          <span className="welcome-label">{t("farmOverview")}</span>
+          <h1>{t("goodDay")}, {user?.name?.split(" ")[0] || "Farmer"}! 👋</h1>
+          <p>{t("happeningToday")} {farmName} {t("today")}</p>
         </div>
 
         <div className="location-pill">
@@ -63,36 +65,36 @@ export default function Dashboard({ setActivePage, farm, user }) {
 
       <section className="stats-grid">
         <StatCard
-          title="Total Farm Area"
+          title={t("totalFarmArea")}
           value={areaText}
-          subtitle="Registered farmland"
+          subtitle={t("registeredFarmland")}
           icon={MapPin}
           color="green"
           trend="Active"
         />
 
         <StatCard
-          title="Soil Type"
+          title={t("soilType")}
           value={soilText}
-          subtitle="Field classification"
+          subtitle={t("fieldClassification")}
           icon={Sprout}
           color="blue"
           trend="Balanced"
         />
 
         <StatCard
-          title="Expected Yield"
+          title={t("expectedYield")}
           value="4.5 Tons"
-          subtitle="Season estimate"
+          subtitle={t("seasonEstimate")}
           icon={TrendingUp}
           color="orange"
           trend="+12%"
         />
 
         <StatCard
-          title="Soil Moisture"
+          title={t("soilMoisture")}
           value="65%"
-          subtitle="Sample field reading"
+          subtitle={t("sampleFieldReading")}
           icon={Droplets}
           color="purple"
           trend="Normal"
@@ -103,11 +105,11 @@ export default function Dashboard({ setActivePage, farm, user }) {
         <div className="panel yield-panel">
           <div className="panel-header">
             <div>
-              <h3>Farm Performance</h3>
-              <p>Seasonal yield trend</p>
+              <h3>{t("farmPerformance")}</h3>
+              <p>{t("seasonalYieldTrend")}</p>
             </div>
 
-            <button className="period-button">Last 7 Months</button>
+            <button className="period-button">{t("last7Months")}</button>
           </div>
 
           <div className="chart-summary">
@@ -141,7 +143,7 @@ export default function Dashboard({ setActivePage, farm, user }) {
         <div className="panel weather-panel">
           <div className="panel-header">
             <div>
-              <h3>Weather Overview</h3>
+              <h3>{t("weatherOverview")}</h3>
               <p>{[weather?.location?.name || farmLocation, weather?.location?.region].filter(Boolean).join(", ")}</p>
             </div>
             <CloudSun size={23} color="#26945d" />
@@ -173,17 +175,17 @@ export default function Dashboard({ setActivePage, farm, user }) {
               <div className="weather-details">
                 <div>
                   <Droplets size={18} />
-                  <span>Humidity</span>
+                  <span>{t("humidity")}</span>
                   <strong>{currentWeather.humidityPercent ?? "—"}%</strong>
                 </div>
                 <div>
                   <CloudSun size={18} />
-                  <span>Wind Speed</span>
+                  <span>{t("windSpeed")}</span>
                   <strong>{currentWeather.windSpeedKph ?? "—"} km/h</strong>
                 </div>
                 <div>
                   <AlertTriangle size={18} />
-                  <span>Rain Chance</span>
+                  <span>{t("rainChance")}</span>
                   <strong>{weather.daily?.[0]?.precipitationProbabilityPercent ?? "—"}%</strong>
                 </div>
               </div>
@@ -211,14 +213,14 @@ export default function Dashboard({ setActivePage, farm, user }) {
         </div>
 
         <div className="alert-content">
-          <h3>Farm Advisory</h3>
+          <h3>{t("farmAdvisory")}</h3>
           <p>
-            {farmName} is showing healthy soil conditions. Keep irrigation balanced and review nutrient levels before the next crop cycle.
+            {farmName} {t("farmAdvisoryText")}
           </p>
         </div>
 
         <button className="text-button" onClick={() => setActivePage("Next Best Action")}>
-          View recommendations →
+          {t("viewRecommendations")}
         </button>
       </section>
     </div>

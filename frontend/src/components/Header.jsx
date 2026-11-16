@@ -90,13 +90,13 @@ export default function Header({
 
         <div>
           <span className="breadcrumb">AgriSaarthi /</span>
-          <h2>{activePage}</h2>
+          <h2>{t(activePage)}</h2>
         </div>
       </div>
 
       <div className="header-right">
         <button
-          className="secondary-button language-toggle-btn"
+          className="language-toggle-btn"
           type="button"
           onClick={toggleLanguage}
           title="Switch Language / ಭಾಷೆಯನ್ನು ಬದಲಿಸಿ (NFR6 & UR8)"
@@ -104,15 +104,19 @@ export default function Header({
             display: "inline-flex",
             alignItems: "center",
             gap: "6px",
-            padding: "6px 12px",
+            padding: "6px 14px",
             fontSize: "13px",
-            fontWeight: "600",
-            borderRadius: "8px",
-            cursor: "pointer"
+            fontWeight: "700",
+            borderRadius: "20px",
+            border: "1.5px solid #22c55e",
+            background: lang === "kn" ? "#15803d" : "#f0fdf4",
+            color: lang === "kn" ? "#ffffff" : "#166534",
+            cursor: "pointer",
+            transition: "all 0.2s ease"
           }}
         >
           <Globe size={16} />
-          <span>{lang === "en" ? "ಕನ್ನಡ" : "English"}</span>
+          <span>{lang === "en" ? "ಕನ್ನಡ (KN)" : "English (EN)"}</span>
         </button>
 
         <div className="header-action-wrap">

@@ -5,8 +5,11 @@ import {
   Leaf
 } from "lucide-react";
 import navigation from "./navigation";
+import { useLanguage } from "../utils/LanguageContext";
 
 export default function Sidebar({ activePage, setActivePage, mobileOpen, setMobileOpen }) {
+  const { t } = useLanguage();
+
   return (
     <>
       {mobileOpen && <div className="sidebar-overlay" onClick={() => setMobileOpen(false)} />}
@@ -19,7 +22,7 @@ export default function Sidebar({ activePage, setActivePage, mobileOpen, setMobi
 
           <div>
             <h2>AgriSaarthi</h2>
-            <span>SMART FARMING PLATFORM</span>
+            <span>{t("platformSub")}</span>
           </div>
 
           <button className="mobile-close" onClick={() => setMobileOpen(false)}>
@@ -30,15 +33,15 @@ export default function Sidebar({ activePage, setActivePage, mobileOpen, setMobi
         <div className="farm-selector">
           <div className="farm-avatar">F</div>
           <div>
-            <strong>My Farm</strong>
-            <span>Primary farmland</span>
+            <strong>{t("myFarm")}</strong>
+            <span>{t("primaryFarmland")}</span>
           </div>
         </div>
 
         <nav className="sidebar-nav">
           {navigation.map((group) => (
             <div className="nav-group" key={group.title}>
-              <p className="nav-heading">{group.title}</p>
+              <p className="nav-heading">{t(group.title)}</p>
 
               {group.items.map((item) => {
                 const Icon = item.icon;
@@ -53,7 +56,7 @@ export default function Sidebar({ activePage, setActivePage, mobileOpen, setMobi
                     }}
                   >
                     <Icon size={19} strokeWidth={1.8} />
-                    <span>{item.name}</span>
+                    <span>{t(item.name)}</span>
                   </button>
                 );
               })}

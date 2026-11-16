@@ -1,19 +1,50 @@
 export const translations = {
   en: {
-    // App & Navigation
+    // Navigation & Menus (exact match keys)
+    "MAIN MENU": "MAIN MENU",
+    "FARM MANAGEMENT": "FARM MANAGEMENT",
+    "Dashboard": "Dashboard",
+    "Crop Recommendation": "Crop Recommendation",
+    "Disease Detection": "Disease Detection",
+    "Weather Intelligence": "Weather Intelligence",
+    "Fertilizer & Soil": "Fertilizer & Soil",
+    "Farm History": "Farm History",
+    "Farm Digital Twin": "Farm Digital Twin",
+    "What-If Simulation": "What-If Simulation",
+    "Next Best Action": "Next Best Action",
+    "Market Intelligence": "Market Intelligence",
+
+    // Branding
     appName: "AgriSaarthi",
     tagline: "Smart farming for a better tomorrow.",
-    dashboard: "Dashboard",
-    farmHistory: "Farm History",
-    cropRecommendation: "Crop Recommendation",
-    diseaseDetection: "Disease Detection",
-    weatherIntelligence: "Weather Intelligence",
-    fertilizerSoil: "Fertilizer & Soil",
-    farmDigitalTwin: "Farm Digital Twin",
-    whatIfSimulation: "What-If Simulation",
-    nextBestAction: "Next Best Action",
-    marketIntelligence: "Market Intelligence",
-    
+    platformSub: "SMART FARMING PLATFORM",
+    myFarm: "My Farm",
+    primaryFarmland: "Primary farmland",
+
+    // Dashboard Overview
+    farmOverview: "FARM OVERVIEW",
+    goodDay: "Good day",
+    happeningToday: "Here is what is happening with",
+    today: "today.",
+    totalFarmArea: "Total Farm Area",
+    registeredFarmland: "Registered farmland",
+    soilType: "Soil Type",
+    fieldClassification: "Field classification",
+    expectedYield: "Expected Yield",
+    seasonEstimate: "Season estimate",
+    soilMoisture: "Soil Moisture",
+    sampleFieldReading: "Sample field reading",
+    farmPerformance: "Farm Performance",
+    seasonalYieldTrend: "Seasonal yield trend",
+    last7Months: "Last 7 Months",
+    weatherOverview: "Weather Overview",
+    humidity: "Humidity",
+    windSpeed: "Wind Speed",
+    rainChance: "Rain Chance",
+    farmAdvisory: "Farm Advisory",
+    farmAdvisoryText: "is showing healthy soil conditions. Keep irrigation balanced and review nutrient levels before the next crop cycle.",
+    viewRecommendations: "View recommendations →",
+
     // Auth Page
     welcomeBack: "Welcome back",
     createAccount: "Create your account",
@@ -40,48 +71,59 @@ export const translations = {
     notifications: "Notifications",
     signOut: "Sign out",
     switchAccount: "Switch account",
-    langToggle: "ಕನ್ನಡ",
+    switchLanguage: "Switch Language / ಭಾಷೆಯನ್ನು ಬದಲಿಸಿ",
 
     // Offline & Caching
-    offlineMode: "Offline Mode (Cached)",
+    offlineMode: "Offline Mode (NFR12 / Acceptance Criteria)",
     offlineNotice: "Showing last saved recommendation from local device storage.",
-    onlineSync: "Online & Synchronized",
-
-    // Crop Recommendation
-    cropRecTitle: "Crop Recommendation Engine",
-    cropRecDesc: "AI-powered crop suggestion based on soil nutrients and climatic parameters.",
-    nitrogen: "Nitrogen (N)",
-    phosphorus: "Phosphorus (P)",
-    potassium: "Potassium (K)",
-    temperature: "Temperature (°C)",
-    humidity: "Humidity (%)",
-    ph: "Soil pH",
-    rainfall: "Rainfall (mm)",
-    getRecommendation: "Get AI Recommendation",
-    topPredictions: "Top Model Predictions",
-    score: "Match Confidence",
-
-    // Weather & Alerts
-    weatherTitle: "Weather Intelligence",
-    currentConditions: "Current Conditions",
-    windSpeed: "Wind Speed",
-    fiveDayForecast: "5-Day Forecast"
+    onlineSync: "Online & Synchronized"
   },
   kn: {
-    // App & Navigation
+    // Navigation & Menus (exact match keys)
+    "MAIN MENU": "ಮುಖ್ಯ ಮೆನು",
+    "FARM MANAGEMENT": "ಕೃಷಿ ನಿರ್ವಹಣೆ",
+    "Dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ (Dashboard)",
+    "Crop Recommendation": "ಬೆಳೆ ಶಿಫಾರಸು (Crop Recommendation)",
+    "Disease Detection": "ರೋಗ ಪತ್ತೆಹಚ್ಚುವಿಕೆ (Disease Detection)",
+    "Weather Intelligence": "ಹವಾಮಾನ ಮಾಹಿತಿ (Weather)",
+    "Fertilizer & Soil": "ಗೊಬ್ಬರ ಮತ್ತು ಮಣ್ಣು (Fertilizer & Soil)",
+    "Farm History": "ಕೃಷಿ ಇತಿಹಾಸ (Farm History)",
+    "Farm Digital Twin": "ಕೃಷಿ ಡಿಜಿಟಲ್ ಟ್ವಿನ್ (Digital Twin)",
+    "What-If Simulation": "ವಾಟ್-ಇಫ್ ಸಿಮ್ಯುಲೇಶನ್ (What-If)",
+    "Next Best Action": "ಮುಂದಿನ ಅತ್ಯುತ್ತಮ ಕ್ರಮ (Next Best Action)",
+    "Market Intelligence": "ಮಾರುಕಟ್ಟೆ ದರಗಳು (Market Mandi)",
+
+    // Branding
     appName: "ಕೃಷಿ ಸಾರಥಿ (AgriSaarthi)",
     tagline: "ಉತ್ತಮ ಭವಿಷ್ಯಕ್ಕಾಗಿ ಸ್ಮಾರ್ಟ್ ಕೃಷಿ.",
-    dashboard: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
-    farmHistory: "ಕೃಷಿ ಇತಿಹಾಸ",
-    cropRecommendation: "ಬೆಳೆ ಶಿಫಾರಸು",
-    diseaseDetection: "ರೋಗ ಪತ್ತೆಹಚ್ಚುವಿಕೆ",
-    weatherIntelligence: "ಹವಾಮಾನ ಮಾಹಿತಿ",
-    fertilizerSoil: "ಗೊಬ್ಬರ ಮತ್ತು ಮಣ್ಣು",
-    farmDigitalTwin: "ಕೃಷಿ ಡಿಜಿಟಲ್ ಟ್ವಿನ್",
-    whatIfSimulation: "ವಾಟ್-ಇಫ್ ಸಿಮ್ಯುಲೇಶನ್",
-    nextBestAction: "ಮುಂದಿನ ಅತ್ಯುತ್ತಮ ಕ್ರಮ",
-    marketIntelligence: "ಮಾರುಕಟ್ಟೆ ದರಗಳು",
-    
+    platformSub: "ಸ್ಮಾರ್ಟ್ ಕೃಷಿ ವೇದಿಕೆ",
+    myFarm: "ನನ್ನ ಜಮೀನು",
+    primaryFarmland: "ಮುಖ್ಯ ಕೃಷಿಭೂಮಿ",
+
+    // Dashboard Overview
+    farmOverview: "ಕೃಷಿ ಅವಲೋಕನ",
+    goodDay: "ಶುಭ ದಿನ",
+    happeningToday: "ನಿಮ್ಮ ಜಮೀನಿನ ಇಂದಿನ ಸ್ಥಿತಿ:",
+    today: "ಇಂದು.",
+    totalFarmArea: "ಒಟ್ಟು ಕೃಷಿ ವಿಸ್ತೀರ್ಣ",
+    registeredFarmland: "ನೋಂದಾಯಿತ ಕೃಷಿಭೂಮಿ",
+    soilType: "ಮಣ್ಣಿನ ವಿಧ",
+    fieldClassification: "ಕ್ಷೇತ್ರ ವರ್ಗೀಕರಣ",
+    expectedYield: "ನಿರೀಕ್ಷಿತ ಇಳುವರಿ",
+    seasonEstimate: "ಋತುಮಾನ ಅಂದಾಜು",
+    soilMoisture: "ಮಣ್ಣಿನ ತೇವಾಂಶ",
+    sampleFieldReading: "ಮಣ್ಣಿನ ತೇವಾಂಶ ಓದುವಿಕೆ",
+    farmPerformance: "ಕೃಷಿ ಸಾಧನೆ",
+    seasonalYieldTrend: "ಋತುಮಾನ ಇಳುವರಿ ಪ್ರವೃತ್ತಿ",
+    last7Months: "ಕಳೆದ ೭ ತಿಂಗಳು",
+    weatherOverview: "ಹವಾಮಾನ ಅವಲೋಕನ",
+    humidity: "ಆರ್ದ್ರತೆ",
+    windSpeed: "ಗಾಳಿಯ ವೇಗ",
+    rainChance: "ಮಳೆಯ ಸಂಭವನೀಯತೆ",
+    farmAdvisory: "ಕೃಷಿ ಸಲಹೆ",
+    farmAdvisoryText: "ಉತ್ತಮ ಮಣ್ಣಿನ ಸ್ಥಿತಿಯನ್ನು ತೋರಿಸುತ್ತಿದೆ. ಮುಂದಿನ ಬೆಳೆ ಚಕ್ರದ ಮೊದಲು ಸಮತೋಲಿತ ನೀರಾವರಿ ಮತ್ತು ಪೋಷಕಾಂಶಗಳನ್ನು ಪರಿಶೀಲಿಸಿ.",
+    viewRecommendations: "ಶಿಫಾರಸುಗಳನ್ನು ವೀಕ್ಷಿಸಿ →",
+
     // Auth Page
     welcomeBack: "ಮರಳಿ ಸುಸ್ವಾಗತ",
     createAccount: "ನಿಮ್ಮ ಖಾತೆಯನ್ನು ರಚಿಸಿ",
@@ -108,31 +150,11 @@ export const translations = {
     notifications: "ಸೂಚನೆಗಳು",
     signOut: "ಸೈನ್ ಔಟ್",
     switchAccount: "ಖಾತೆ ಬದಲಾಯಿಸಿ",
-    langToggle: "English",
+    switchLanguage: "Switch Language / ಭಾಷೆಯನ್ನು ಬದಲಿಸಿ",
 
     // Offline & Caching
-    offlineMode: "ಆಫ್‌ಲೈನ್ ಮೋಡ್ (ಕ್ಯಾಶ್ ಮಾಡಲಾಗಿದೆ)",
+    offlineMode: "ಆಫ್‌ಲೈನ್ ಮೋಡ್ (NFR12 / ಸ್ವೀಕಾರ ಮಾನದಂಡಗಳು)",
     offlineNotice: "ಸ್ಥಳೀಯ ಸಂಗ್ರಹಣೆಯಿಂದ ಕೊನೆಯ ಶಿಫಾರಸನ್ನು ಪ್ರದರ್ಶಿಸಲಾಗುತ್ತಿದೆ.",
-    onlineSync: "ಆನ್‌ಲೈನ್ ಮತ್ತು ನವೀಕರಿಸಲಾಗಿದೆ",
-
-    // Crop Recommendation
-    cropRecTitle: "ಬೆಳೆ ಶಿಫಾರಸು ಎಂಜಿನ್",
-    cropRecDesc: "ಮಣ್ಣಿನ ಪೋಷಕಾಂಶಗಳು ಮತ್ತು ಹವಾಮಾನದ ಆಧಾರದ ಮೇಲೆ AI ಬೆಳೆ ಸಲಹೆ.",
-    nitrogen: "ಸಾರಜನಕ (N)",
-    phosphorus: "ರಂಜಕ (P)",
-    potassium: "ಪೊಟ್ಯಾಶ್ (K)",
-    temperature: "ತಾಪಮಾನ (°C)",
-    humidity: "ಆರ್ದ್ರತೆ (%)",
-    ph: "ಮಣ್ಣಿನ pH",
-    rainfall: "ಮಳೆ (mm)",
-    getRecommendation: "AI ಬೆಳೆ ಶಿಫಾರಸು ಪಡೆಯಿರಿ",
-    topPredictions: "ಸೂಕ್ತವಾದ ಬೆಳೆಗಳು",
-    score: "ಹೊಂದಾಣಿಕೆ ನಿಖರತೆ",
-
-    // Weather & Alerts
-    weatherTitle: "ಹವಾಮಾನ ಮಾಹಿತಿ",
-    currentConditions: "ಪ್ರಸ್ತುತ ಹವಾಮಾನ",
-    windSpeed: "ಗಾಳಿಯ ವೇಗ",
-    fiveDayForecast: "೫ ದಿನಗಳ ಮುನ್ಸೂಚನೆ"
+    onlineSync: "ಆನ್‌ಲೈನ್ ಮತ್ತು ನವೀಕರಿಸಲಾಗಿದೆ"
   }
 };
