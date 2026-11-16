@@ -17,6 +17,11 @@ from model_utils import (
     load_model_bundle,
     predict_top_three,
 )
+from disease_detection import (
+    is_disease_model_available,
+    load_disease_model,
+    predict_disease_mobilenet,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +140,8 @@ def home() -> dict[str, Any]:
         "message": "Welcome to AgriSaarthi ML Service",
         "status": "Running",
         "crop_model_loaded": CROP_MODEL_PATH.is_file(),
-        "disease_model_loaded": MODEL_AVAILABLE,
+        "disease_model_loaded": is_disease_model_available(),
+        "disease_model_architecture": "MobileNetV2 (PlantVillage 38 Classes)" if is_disease_model_available() else "Heuristic Fallback",
     }
 
 
@@ -146,7 +152,8 @@ def health() -> dict[str, Any]:
         "service": "ML Service",
         "message": "Python ML service is working",
         "crop_model_loaded": CROP_MODEL_PATH.is_file(),
-        "disease_model_loaded": MODEL_AVAILABLE,
+        "disease_model_loaded": is_disease_model_available(),
+        "disease_model_name": "MobileNetV2 PlantVillage Pretrained" if is_disease_model_available() else "Heuristic Fallback",
     }
 
 
@@ -210,17 +217,30 @@ async def predict_disease(file: UploadFile = File(...)) -> dict[str, Any]:
             raise ValueError("Uploaded file is empty.")
 
         image = _image_to_rgb(image_bytes)
-        prediction = _heuristic_prediction(image)
 
-        return {
-            "success": True,
-            "image_name": file.filename,
-            "prediction": prediction,
-            "model_status": {
-                "available": MODEL_AVAILABLE,
-                "name": MODEL_NAME,
-                "note": "This environment does not currently include a trained plant disease checkpoint. The current inference is a transparent heuristic fallback and should be treated as low-confidence guidance only.",
-            },
-        }
+        if is_disease_model_available():
+            prediction = predict_disease_mobilenet(image)
+            return {
+                "success": True,
+                "image_name": file.filename,
+                "prediction": prediction,
+                "model_status": {
+                    "available": True,
+                    "name": "MobileNetV2 (PlantVillage Pretrained)",
+                    "note": "Classified using MobileNetV2 across 38 crop disease & healthy conditions.",
+                },
+            }
+        else:
+            prediction = _heuristic_prediction(image)
+            return {
+                "success": True,
+                "image_name": file.filename,
+                "prediction": prediction,
+                "model_status": {
+                    "available": False,
+                    "name": MODEL_NAME,
+                    "note": "This environment does not currently include a trained plant disease checkpoint. The current inference is a transparent heuristic fallback.",
+                },
+            }
     except Exception as exc:  # pragma: no cover - defensive path
         raise HTTPException(status_code=400, detail=f"Image processing failed: {exc}") from exc

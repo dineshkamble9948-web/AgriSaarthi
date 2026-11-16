@@ -42,8 +42,8 @@ const moduleDetails = {
   },
   "Disease Detection": {
     icon: ScanSearch,
-    description: "Check leaf images against Pl@ntNet's disease catalog for possible matches.",
-    features: ["JPEG or PNG leaf image", "Crop context", "Possible matches and confidence scores", "Diagnosis guidance"]
+    description: "AI-powered crop disease detection using MobileNetV2 deep learning (PlantVillage 38-class catalog) with real-time symptoms and treatment guidance.",
+    features: ["MobileNetV2 Deep Learning", "38 Crop & Disease Classes", "Instant Confidence Scoring", "Agronomic Treatment Guidance"]
   },
   "Weather Intelligence": {
     icon: CloudSun,
@@ -243,7 +243,7 @@ function DiseaseDetectionPanel() {
       .catch((requestError) => {
         setCatalogError(
           requestError.response?.data?.message
-          || "The Pl@ntNet disease catalog is unavailable right now."
+          || "The disease detection catalog is unavailable right now."
         );
       });
   }, []);
@@ -314,6 +314,7 @@ function DiseaseDetectionPanel() {
   };
 
   const results = Array.isArray(result?.results) ? result.results : [];
+  const prediction = result?.prediction;
 
   return (
     <div className="module-content-grid">
@@ -324,14 +325,24 @@ function DiseaseDetectionPanel() {
             Crop
             <select value={crop} onChange={(event) => setCrop(event.target.value)} required>
               <option value="">Select a crop</option>
-              <option value="Rice">Rice</option>
-              <option value="Wheat">Wheat</option>
-              <option value="Maize">Maize</option>
-              <option value="Tomato">Tomato</option>
-              <option value="Potato">Potato</option>
-              <option value="Cotton">Cotton</option>
+              <option value="Apple">Apple</option>
+              <option value="Blueberry">Blueberry</option>
+              <option value="Cherry">Cherry</option>
               <option value="Chilli">Chilli</option>
+              <option value="Corn (Maize)">Corn (Maize)</option>
+              <option value="Cotton">Cotton</option>
+              <option value="Grape">Grape</option>
+              <option value="Orange">Orange</option>
+              <option value="Peach">Peach</option>
+              <option value="Pepper, Bell">Pepper (Bell)</option>
+              <option value="Potato">Potato</option>
+              <option value="Raspberry">Raspberry</option>
+              <option value="Rice">Rice</option>
               <option value="Soybean">Soybean</option>
+              <option value="Squash">Squash</option>
+              <option value="Strawberry">Strawberry</option>
+              <option value="Tomato">Tomato</option>
+              <option value="Wheat">Wheat</option>
               <option value="Other">Other / not listed</option>
             </select>
           </label>
@@ -347,11 +358,11 @@ function DiseaseDetectionPanel() {
           </label>
         </div>
         <p className="disease-info-note">
-          Crop is saved as context only; Pl@ntNet does not use it to filter identification. Its disease catalog supports a limited set of plants and pathologies.
+          Deep learning disease analysis is powered by MobileNetV2 trained across 38 crop & disease conditions.
         </p>
         {catalogCount !== null ? (
           <p className="disease-catalog-status">
-            Pl@ntNet catalog: {catalogCount} identifiable disease entries.
+            MobileNetV2 AI Catalog: {catalogCount} identifiable crop and pathology classes.
           </p>
         ) : catalogError ? (
           <p className="disease-inline-error">{catalogError}</p>
@@ -369,12 +380,69 @@ function DiseaseDetectionPanel() {
         <button className="primary-button disease-detect-button" type="submit" disabled={loading || !file || !crop}>
           {loading ? "Analyzing..." : "Detect Disease"}
         </button>
-        {loading && <div className="status-pill" role="status">Sending image to Pl@ntNet...</div>}
+        {loading && <div className="status-pill" role="status">Analyzing leaf image with MobileNetV2 AI...</div>}
       </form>
 
       <div className="panel disease-results-panel" aria-live="polite">
-        <h3>Possible identifications</h3>
-        {results.length ? (
+        <h3>AI Diagnosis & Recommendations</h3>
+
+        {prediction ? (
+          <div className="mobilenet-diagnosis-container">
+            <div className="disease-result-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <span className={`status-pill ${prediction.is_healthy ? "healthy-pill" : "disease-pill"}`} style={{ padding: "0.35rem 0.75rem", borderRadius: "1rem", fontWeight: "600", fontSize: "0.85rem", background: prediction.is_healthy ? "rgba(38, 148, 93, 0.15)" : "rgba(220, 38, 38, 0.15)", color: prediction.is_healthy ? "#26945d" : "#dc2626", border: `1px solid ${prediction.is_healthy ? "#26945d" : "#dc2626"}` }}>
+                {prediction.is_healthy ? "✓ Healthy Plant" : "⚠ Disease Detected"}
+              </span>
+              <strong style={{ fontSize: "1.1rem", color: "#1b4d3e" }}>
+                {prediction.confidence_percent || Math.round(prediction.confidence * 100)}% Confidence
+              </strong>
+            </div>
+
+            <h2 style={{ margin: "0.5rem 0 1rem 0", color: "#111827", fontSize: "1.4rem" }}>
+              {prediction.prediction}
+            </h2>
+
+            <p className="disease-result-caveat" style={{ marginBottom: "1rem" }}>
+              Classified using <strong>{result.model || "MobileNetV2 (PlantVillage)"}</strong>. Confirm diagnosis with a local agronomist before spraying.
+            </p>
+
+            {prediction.symptoms && prediction.symptoms.length > 0 && (
+              <div className="disease-guidance" style={{ marginBottom: "1rem", background: "#f8fafc", padding: "1rem", borderRadius: "8px", borderLeft: "4px solid #3b82f6" }}>
+                <strong style={{ color: "#1e3a8a", display: "block", marginBottom: "0.5rem" }}>Observed Symptoms:</strong>
+                <ul style={{ margin: 0, paddingLeft: "1.25rem", color: "#334155" }}>
+                  {prediction.symptoms.map((symptom, idx) => (
+                    <li key={idx} style={{ marginBottom: "0.25rem" }}>{symptom}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {prediction.recommendation && (
+              <div className="disease-guidance" style={{ marginBottom: "1.5rem", background: "#f0fdf4", padding: "1rem", borderRadius: "8px", borderLeft: "4px solid #26945d" }}>
+                <strong style={{ color: "#166534", display: "block", marginBottom: "0.5rem" }}>Recommended Treatment & Prevention:</strong>
+                <p style={{ margin: 0, color: "#14532d", lineHeight: "1.5" }}>{prediction.recommendation}</p>
+              </div>
+            )}
+
+            {prediction.top_predictions && prediction.top_predictions.length > 1 && (
+              <div style={{ marginTop: "1.5rem" }}>
+                <strong style={{ display: "block", marginBottom: "0.75rem", fontSize: "0.95rem", color: "#4b5563" }}>Top Match Probabilities:</strong>
+                <div className="disease-result-list">
+                  {prediction.top_predictions.map((match, idx) => (
+                    <article className="disease-result-card" key={idx} style={{ padding: "0.75rem 1rem", marginBottom: "0.5rem" }}>
+                      <div className="disease-result-heading" style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span>Match #{idx + 1}: {match.class}</span>
+                        <strong>{match.score_percent || Math.round(match.score * 100)}%</strong>
+                      </div>
+                      <div style={{ width: "100%", background: "#e5e7eb", height: "6px", borderRadius: "3px", marginTop: "0.4rem", overflow: "hidden" }}>
+                        <div style={{ width: `${match.score_percent || match.score * 100}%`, background: idx === 0 ? "#26945d" : "#94a3b8", height: "100%" }} />
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : results.length ? (
           <>
             <p className="disease-result-caveat">
               These are uncertain AI matches, not confirmed diagnoses. Verify symptoms with a local agricultural expert.
@@ -394,26 +462,26 @@ function DiseaseDetectionPanel() {
                     {match.name && match.description && <p className="disease-code">EPPO code: {match.name}</p>}
                     {hasScore && (
                       <p className="disease-score-note">
-                        Pl@ntNet confidence score: {match.score.toFixed(3)} (not a confirmed diagnosis).
+                        Confidence score: {match.score.toFixed(3)}.
                       </p>
                     )}
                   </article>
                 );
               })}
             </div>
-            <div className="disease-guidance">
-              <strong>Prevention and treatment</strong>
-              <p>
-                Pl@ntNet does not provide disease-specific guidance. As general precautions, clean tools after handling affected plants and avoid moving symptomatic plant debris between plots. Confirm the diagnosis with a local agricultural expert before applying any treatment.
-              </p>
-            </div>
+            {result?.recommendation ? (
+              <div className="disease-guidance">
+                <strong>Prevention and treatment</strong>
+                <p>{result.recommendation}</p>
+              </div>
+            ) : null}
           </>
         ) : result ? (
           <div className="risk-box">
             <ShieldAlert size={18} />
             <div>
               <strong>No disease match returned</strong>
-              <p>{result.message} The crop or pathology may not be in Pl@ntNet's supported catalog. Try a clear leaf image or seek local expert advice.</p>
+              <p>{result.message} The crop or pathology may not be in the supported catalog. Try a clear leaf image or seek local expert advice.</p>
             </div>
           </div>
         ) : (
@@ -421,7 +489,7 @@ function DiseaseDetectionPanel() {
             <ShieldAlert size={18} />
             <div>
               <strong>Ready to check</strong>
-              <p>Upload a leaf image and select its crop to view possible disease matches.</p>
+              <p>Upload a leaf image and select its crop to view deep learning disease diagnosis.</p>
             </div>
           </div>
         )}

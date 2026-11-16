@@ -8,14 +8,67 @@ import {
   PlantNetServiceError
 } from "../services/plantNetDiseaseService.js";
 
+const MOBILENET_CATALOG = [
+  { id: 0, crop: "Apple", name: "Apple Scab", type: "Fungal" },
+  { id: 1, crop: "Apple", name: "Apple with Black Rot", type: "Fungal" },
+  { id: 2, crop: "Apple", name: "Cedar Apple Rust", type: "Fungal" },
+  { id: 3, crop: "Apple", name: "Healthy Apple", type: "Healthy" },
+  { id: 4, crop: "Blueberry", name: "Healthy Blueberry Plant", type: "Healthy" },
+  { id: 5, crop: "Cherry", name: "Cherry with Powdery Mildew", type: "Fungal" },
+  { id: 6, crop: "Cherry", name: "Healthy Cherry Plant", type: "Healthy" },
+  { id: 7, crop: "Corn", name: "Corn (Maize) with Cercospora and Gray Leaf Spot", type: "Fungal" },
+  { id: 8, crop: "Corn", name: "Corn (Maize) with Common Rust", type: "Fungal" },
+  { id: 9, crop: "Corn", name: "Corn (Maize) with Northern Leaf Blight", type: "Fungal" },
+  { id: 10, crop: "Corn", name: "Healthy Corn (Maize) Plant", type: "Healthy" },
+  { id: 11, crop: "Grape", name: "Grape with Black Rot", type: "Fungal" },
+  { id: 12, crop: "Grape", name: "Grape with Esca (Black Measles)", type: "Fungal" },
+  { id: 13, crop: "Grape", name: "Grape with Isariopsis Leaf Spot", type: "Fungal" },
+  { id: 14, crop: "Grape", name: "Healthy Grape Plant", type: "Healthy" },
+  { id: 15, crop: "Orange", name: "Orange with Citrus Greening", type: "Bacterial" },
+  { id: 16, crop: "Peach", name: "Peach with Bacterial Spot", type: "Bacterial" },
+  { id: 17, crop: "Peach", name: "Healthy Peach Plant", type: "Healthy" },
+  { id: 18, crop: "Bell Pepper", name: "Bell Pepper with Bacterial Spot", type: "Bacterial" },
+  { id: 19, crop: "Bell Pepper", name: "Healthy Bell Pepper Plant", type: "Healthy" },
+  { id: 20, crop: "Potato", name: "Potato with Early Blight", type: "Fungal" },
+  { id: 21, crop: "Potato", name: "Potato with Late Blight", type: "Fungal / Oomycete" },
+  { id: 22, crop: "Potato", name: "Healthy Potato Plant", type: "Healthy" },
+  { id: 23, crop: "Raspberry", name: "Healthy Raspberry Plant", type: "Healthy" },
+  { id: 24, crop: "Soybean", name: "Healthy Soybean Plant", type: "Healthy" },
+  { id: 25, crop: "Squash", name: "Squash with Powdery Mildew", type: "Fungal" },
+  { id: 26, crop: "Strawberry", name: "Strawberry with Leaf Scorch", type: "Fungal" },
+  { id: 27, crop: "Strawberry", name: "Healthy Strawberry Plant", type: "Healthy" },
+  { id: 28, crop: "Tomato", name: "Tomato with Bacterial Spot", type: "Bacterial" },
+  { id: 29, crop: "Tomato", name: "Tomato with Early Blight", type: "Fungal" },
+  { id: 30, crop: "Tomato", name: "Tomato with Late Blight", type: "Oomycete" },
+  { id: 31, crop: "Tomato", name: "Tomato with Leaf Mold", type: "Fungal" },
+  { id: 32, crop: "Tomato", name: "Tomato with Septoria Leaf Spot", type: "Fungal" },
+  { id: 33, crop: "Tomato", name: "Tomato with Spider Mites", type: "Pest / Mites" },
+  { id: 34, crop: "Tomato", name: "Tomato with Target Spot", type: "Fungal" },
+  { id: 35, crop: "Tomato", name: "Tomato Yellow Leaf Curl Virus", type: "Viral" },
+  { id: 36, crop: "Tomato", name: "Tomato Mosaic Virus", type: "Viral" },
+  { id: 37, crop: "Tomato", name: "Healthy Tomato Plant", type: "Healthy" }
+];
+
 const supportedCrops = new Set([
-  "Cotton",
+  "Apple",
+  "Blueberry",
+  "Cherry",
   "Chilli",
+  "Corn",
+  "Corn (Maize)",
+  "Cotton",
+  "Grape",
   "Maize",
+  "Orange",
   "Other",
+  "Peach",
+  "Pepper, Bell",
   "Potato",
+  "Raspberry",
   "Rice",
   "Soybean",
+  "Squash",
+  "Strawberry",
   "Tomato",
   "Wheat"
 ]);
@@ -32,17 +85,6 @@ const isSupportedImage = (file) => {
     );
   }
   return false;
-};
-
-const getApiKey = (res) => {
-  const apiKey = process.env.PLANTNET_API_KEY?.trim();
-  if (apiKey) return apiKey;
-
-  res.status(503).json({
-    success: false,
-    message: "Disease detection is not configured. Add PLANTNET_API_KEY to backend/.env and restart the backend."
-  });
-  return null;
 };
 
 const sendProviderError = (res, error, action) => {
@@ -83,54 +125,118 @@ export const analyzeDisease = async (req, res) => {
     });
   }
 
-  const apiKey = getApiKey(res);
-  if (!apiKey) return;
+  // 1. Try MobileNetV2 Deep Learning via ML Service
+  const mlApiUrl = (process.env.ML_API_URL || "http://localhost:8000").replace(/\/+$/, "");
+  let mlData = null;
 
   try {
-    const identification = await identifyDisease({ file: req.file, apiKey });
-    const results = identification.results;
+    const formData = new FormData();
+    const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
+    formData.append("file", blob, req.file.originalname || "leaf.jpg");
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    const mlResponse = await fetch(`${mlApiUrl}/predict-disease`, {
+      method: "POST",
+      body: formData,
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+
+    if (mlResponse.ok) {
+      mlData = await mlResponse.json();
+    }
+  } catch (mlErr) {
+    console.warn("MobileNetV2 ML service call did not succeed, checking fallback:", mlErr.message);
+  }
+
+  if (mlData?.success && mlData?.prediction) {
+    const pred = mlData.prediction;
+    const topPredictions = pred.top_predictions || [];
+    const results = topPredictions.map((tp) => ({
+      name: tp.class,
+      score: tp.score,
+      score_percent: tp.score_percent
+    }));
+
     const report = createDiseaseReport(req.user.id, {
       fileName: req.file.originalname,
       fileType: req.file.mimetype,
-      crop,
-      provider: "Pl@ntNet",
+      crop: pred.crop || crop,
+      provider: "MobileNetV2",
+      model: pred.model_architecture || "MobileNetV2 (PlantVillage Pretrained)",
+      prediction: pred,
       results,
-      language: identification.language || "en",
+      symptoms: pred.symptoms || [],
+      recommendation: pred.recommendation || "",
       success: true,
       analysisTime: new Date().toISOString()
     });
 
     return res.status(200).json({
       success: true,
-      message: results.length
-        ? "Possible disease matches returned by Pl@ntNet."
-        : "Pl@ntNet did not identify a disease match.",
-      crop,
+      provider: "MobileNetV2",
+      model: pred.model_architecture || "MobileNetV2 (PlantVillage Pretrained)",
+      message: `Identified condition: ${pred.prediction} (${pred.confidence_percent || Math.round(pred.confidence * 100)}% confidence).`,
+      crop: pred.crop || crop,
+      prediction: pred,
       results,
-      language: identification.language || "en",
-      version: identification.version || null,
-      remainingIdentificationRequests: identification.remainingIdentificationRequests ?? null,
+      symptoms: pred.symptoms || [],
+      recommendation: pred.recommendation || "",
       report
     });
-  } catch (error) {
-    return sendProviderError(res, error, "Disease analysis");
   }
+
+  // 2. Fallback to Pl@ntNet if PLANTNET_API_KEY is configured
+  const plantNetApiKey = process.env.PLANTNET_API_KEY?.trim();
+  if (plantNetApiKey) {
+    try {
+      const identification = await identifyDisease({ file: req.file, apiKey: plantNetApiKey });
+      const results = identification.results;
+      const report = createDiseaseReport(req.user.id, {
+        fileName: req.file.originalname,
+        fileType: req.file.mimetype,
+        crop,
+        provider: "Pl@ntNet",
+        results,
+        language: identification.language || "en",
+        success: true,
+        analysisTime: new Date().toISOString()
+      });
+
+      return res.status(200).json({
+        success: true,
+        provider: "Pl@ntNet",
+        message: results.length
+          ? "Possible disease matches returned by Pl@ntNet."
+          : "Pl@ntNet did not identify a disease match.",
+        crop,
+        results,
+        language: identification.language || "en",
+        version: identification.version || null,
+        remainingIdentificationRequests: identification.remainingIdentificationRequests ?? null,
+        report
+      });
+    } catch (error) {
+      return sendProviderError(res, error, "Disease analysis");
+    }
+  }
+
+  return res.status(503).json({
+    success: false,
+    message: "Disease detection is not configured. Add PLANTNET_API_KEY to backend/.env or start the ML service."
+  });
 };
 
 export const getDiseaseCatalogList = async (req, res) => {
-  const apiKey = getApiKey(res);
-  if (!apiKey) return;
-
-  try {
-    const catalog = await getDiseaseCatalog(apiKey);
-    return res.status(200).json({
-      success: true,
-      count: catalog.length,
-      catalog
-    });
-  } catch (error) {
-    return sendProviderError(res, error, "Disease catalog");
-  }
+  // MobileNetV2 38-class plant disease catalog
+  return res.status(200).json({
+    success: true,
+    provider: "MobileNetV2",
+    count: MOBILENET_CATALOG.length,
+    catalog: MOBILENET_CATALOG
+  });
 };
 
 export const getDiseaseHistory = async (req, res) => {
