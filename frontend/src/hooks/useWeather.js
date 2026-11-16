@@ -7,6 +7,7 @@ export default function useWeather(location, state) {
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(Boolean(location));
   const [error, setError] = useState("");
+  const [isOffline, setIsOffline] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const retry = useCallback(() => {
@@ -34,14 +35,40 @@ export default function useWeather(location, state) {
           }
         });
         if (active) {
-          setWeather(response.data.weather);
+          const freshWeather = response.data.weather;
+          setWeather(freshWeather);
+          setIsOffline(false);
+          try {
+            localStorage.setItem(
+              "agrisaarthi_cached_weather",
+              JSON.stringify({ weather: freshWeather, timestamp: new Date().toISOString() })
+            );
+          } catch (e) {
+            // ignore storage quota errors
+          }
         }
       } catch (requestError) {
         if (active) {
-          setError(
-            requestError.response?.data?.message
-            || "Weather data could not be reached. Check the backend connection and retry."
-          );
+          // NFR12: Attempt to load from offline cache during connectivity interruptions
+          const cached = localStorage.getItem("agrisaarthi_cached_weather");
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached);
+              setWeather(parsed.weather);
+              setIsOffline(true);
+              setError("Offline mode: displaying last cached weather forecast.");
+            } catch (e) {
+              setError(
+                requestError.response?.data?.message
+                || "Weather data could not be reached. Check the backend connection and retry."
+              );
+            }
+          } else {
+            setError(
+              requestError.response?.data?.message
+              || "Weather data could not be reached. Check the backend connection and retry."
+            );
+          }
         }
       } finally {
         if (active && showLoading) {
@@ -62,5 +89,5 @@ export default function useWeather(location, state) {
     };
   }, [location, state, refreshKey]);
 
-  return { weather, loading, error, retry };
+  return { weather, loading, error, isOffline, retry };
 }

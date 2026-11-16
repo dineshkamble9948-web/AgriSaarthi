@@ -3,12 +3,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   ChevronDown,
+  Globe,
   LogOut,
   Menu,
   Search,
   UsersRound
 } from "lucide-react";
 import navigation from "./navigation";
+import { useLanguage } from "../utils/LanguageContext";
 
 const searchItems = navigation.flatMap((group) => (
   group.items.map((item) => ({ name: item.name, group: group.title }))
@@ -22,6 +24,7 @@ export default function Header({
   onLogout,
   onSwitchAccount
 }) {
+  const { lang, toggleLanguage, t } = useLanguage();
   const name = user?.name || "Farmer User";
   const [openPanel, setOpenPanel] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -92,6 +95,26 @@ export default function Header({
       </div>
 
       <div className="header-right">
+        <button
+          className="secondary-button language-toggle-btn"
+          type="button"
+          onClick={toggleLanguage}
+          title="Switch Language / ಭಾಷೆಯನ್ನು ಬದಲಿಸಿ (NFR6 & UR8)"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "6px 12px",
+            fontSize: "13px",
+            fontWeight: "600",
+            borderRadius: "8px",
+            cursor: "pointer"
+          }}
+        >
+          <Globe size={16} />
+          <span>{lang === "en" ? "ಕನ್ನಡ" : "English"}</span>
+        </button>
+
         <div className="header-action-wrap">
           <button
             className="header-search"

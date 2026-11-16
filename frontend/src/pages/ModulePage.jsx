@@ -95,6 +95,8 @@ function CropRecommendationPanel() {
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isOffline, setIsOffline] = useState(false);
+  const [cachedTimestamp, setCachedTimestamp] = useState(null);
 
   const getRecommendations = async (event) => {
     event.preventDefault();
@@ -106,13 +108,41 @@ function CropRecommendationPanel() {
         Object.entries(form).map(([feature, value]) => [feature, Number(value)])
       );
       const response = await api.post("/crops/recommend", inputs);
-      setRecommendations(response.data.recommendations || []);
+      const recs = response.data.recommendations || [];
+      setRecommendations(recs);
+      setIsOffline(false);
+      try {
+        localStorage.setItem(
+          "agrisaarthi_cached_crop_rec",
+          JSON.stringify({ recommendations: recs, timestamp: new Date().toISOString() })
+        );
+      } catch (e) {
+        // ignore storage errors
+      }
     } catch (requestError) {
-      setRecommendations([]);
-      setError(
-        requestError.response?.data?.message
-        || "Could not reach the crop recommendation service. Check that the backend and ML service are running."
-      );
+      // NFR12 & Acceptance Criteria: Offline fallback to cached recommendation
+      const cached = localStorage.getItem("agrisaarthi_cached_crop_rec");
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          setRecommendations(parsed.recommendations || []);
+          setIsOffline(true);
+          setCachedTimestamp(parsed.timestamp);
+          setError("");
+        } catch (e) {
+          setRecommendations([]);
+          setError(
+            requestError.response?.data?.message
+            || "Could not reach the crop recommendation service. Check that the backend and ML service are running."
+          );
+        }
+      } else {
+        setRecommendations([]);
+        setError(
+          requestError.response?.data?.message
+          || "Could not reach the crop recommendation service. Check that the backend and ML service are running."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -156,6 +186,12 @@ function CropRecommendationPanel() {
 
       <div className="panel">
         <h3>Top crop predictions</h3>
+        {isOffline && (
+          <div style={{ background: "#fef3c7", border: "1px solid #f59e0b", color: "#92400e", padding: "10px 14px", borderRadius: "8px", marginBottom: "14px", fontSize: "13px" }}>
+            <strong>⚡ Offline Mode (NFR12 / Acceptance Criteria)</strong>
+            <p style={{ margin: "4px 0 0" }}>Displaying last saved recommendations cached on your device{cachedTimestamp ? ` (${new Date(cachedTimestamp).toLocaleDateString()})` : ""}. Live ML service is currently offline.</p>
+          </div>
+        )}
         <div className="recommendation-list">
           {error ? (
             <div className="risk-box">

@@ -1,9 +1,11 @@
 
 import { useState } from "react";
-import { Sprout, Lock, Mail, User, ArrowRight } from "lucide-react";
+import { Sprout, Lock, Mail, User, ArrowRight, Globe } from "lucide-react";
 import api from "../services/api";
+import { useLanguage } from "../utils/LanguageContext";
 
 export default function AuthPage({ onAuth, initialMode = "register" }) {
+  const { lang, toggleLanguage, t } = useLanguage();
   const [isRegister, setIsRegister] = useState(initialMode !== "login");
 
   const [form, setForm] = useState({
@@ -12,6 +14,7 @@ export default function AuthPage({ onAuth, initialMode = "register" }) {
     password: ""
   });
 
+  const [consentGiven, setConsentGiven] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,6 +29,12 @@ export default function AuthPage({ onAuth, initialMode = "register" }) {
     e.preventDefault();
 
     setError("");
+
+    if (isRegister && !consentGiven) {
+      setError(t("consentRequiredError"));
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -104,6 +113,26 @@ export default function AuthPage({ onAuth, initialMode = "register" }) {
       </div>
 
       <div className="auth-form-side">
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            className="secondary-button"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "5px 12px",
+              fontSize: "12px",
+              fontWeight: "600",
+              borderRadius: "20px",
+              cursor: "pointer"
+            }}
+          >
+            <Globe size={14} />
+            <span>{lang === "en" ? "ಕನ್ನಡಕ್ಕೆ ಬದಲಿಸಿ (Kannada)" : "Switch to English"}</span>
+          </button>
+        </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
 
@@ -117,24 +146,24 @@ export default function AuthPage({ onAuth, initialMode = "register" }) {
           </span>
 
           <h2>
-            {isRegister ? "Create your account" : "Welcome back"}
+            {isRegister ? t("createAccount") : t("welcomeBack")}
           </h2>
 
           <p className="auth-description">
             {isRegister
-              ? "Join AgriSaarthi and manage your farm intelligently."
-              : "Login to access your personal farming dashboard."}
+              ? t("joinAgriSaarthi")
+              : t("loginSubtitle")}
           </p>
 
           {isRegister && (
             <div className="auth-field">
-              <label>Full Name</label>
+              <label>{t("fullName")}</label>
               <div className="auth-input">
                 <User size={18} />
                 <input
                   type="text"
                   name="name"
-                  placeholder="Enter your name"
+                  placeholder={t("enterName")}
                   value={form.name}
                   onChange={handleChange}
                   autoComplete="name"
@@ -147,13 +176,13 @@ export default function AuthPage({ onAuth, initialMode = "register" }) {
           )}
 
           <div className="auth-field">
-            <label>Email Address</label>
+            <label>{t("emailAddress")}</label>
             <div className="auth-input">
               <Mail size={18} />
               <input
                 type="email"
                 name="email"
-                placeholder="Enter your email"
+                placeholder={t("enterEmail")}
                 value={form.email}
                 onChange={handleChange}
                 autoComplete="email"
@@ -163,13 +192,13 @@ export default function AuthPage({ onAuth, initialMode = "register" }) {
           </div>
 
           <div className="auth-field">
-            <label>Password</label>
+            <label>{t("password")}</label>
             <div className="auth-input">
               <Lock size={18} />
               <input
                 type="password"
                 name="password"
-                placeholder="Enter your password"
+                placeholder={t("enterPassword")}
                 value={form.password}
                 onChange={handleChange}
                 autoComplete={isRegister ? "new-password" : "current-password"}
@@ -178,6 +207,22 @@ export default function AuthPage({ onAuth, initialMode = "register" }) {
               />
             </div>
           </div>
+
+          {isRegister && (
+            <div className="auth-consent-field" style={{ display: "flex", alignItems: "flex-start", gap: "10px", margin: "14px 0", fontSize: "13px", color: "var(--text-muted, #4b5563)", textAlign: "left" }}>
+              <input
+                type="checkbox"
+                id="userConsent"
+                checked={consentGiven}
+                onChange={(e) => setConsentGiven(e.target.checked)}
+                style={{ marginTop: "3px", width: "16px", height: "16px", cursor: "pointer", accentColor: "#15803d" }}
+                required
+              />
+              <label htmlFor="userConsent" style={{ cursor: "pointer", lineHeight: "1.4" }}>
+                {t("userConsentText")}
+              </label>
+            </div>
+          )}
 
           {error && (
             <div className="auth-error">
@@ -193,8 +238,8 @@ export default function AuthPage({ onAuth, initialMode = "register" }) {
             {loading
               ? "Please wait..."
               : isRegister
-                ? "Create Account"
-                : "Login to Dashboard"}
+                ? t("registerButton")
+                : t("loginButton")}
 
             <ArrowRight size={18} />
           </button>
@@ -212,8 +257,8 @@ export default function AuthPage({ onAuth, initialMode = "register" }) {
 
           <div className="auth-switch">
             {isRegister
-              ? "Already have an account?"
-              : "Don't have an account?"}
+              ? t("alreadyHaveAccount")
+              : t("dontHaveAccount")}
 
             <button
               type="button"
@@ -222,7 +267,7 @@ export default function AuthPage({ onAuth, initialMode = "register" }) {
                 setError("");
               }}
             >
-              {isRegister ? "Login" : "Register"}
+              {isRegister ? t("loginLink") : t("registerLink")}
             </button>
           </div>
 
