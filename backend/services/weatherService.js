@@ -1,6 +1,6 @@
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 100;
-const REQUEST_TIMEOUT_MS = 8000;
+const REQUEST_TIMEOUT_MS = 15000;
 const weatherCache = new Map();
 
 export class WeatherProviderError extends Error {

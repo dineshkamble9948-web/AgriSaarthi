@@ -35,7 +35,7 @@ export const findUserById = (id) => {
   return fallbackStore.users.find((user) => normalizeId(user.id || user._id) === target);
 };
 
-export const createUser = ({ name, email, password }) => {
+export const createUser = ({ name, email, password, state = "", district = "", village = "", city = "", pincode = "", latitude = null, longitude = null }) => {
   const user = {
     id: `user_${Date.now()}_${fallbackStore.users.length + 1}`,
     _id: `user_${Date.now()}_${fallbackStore.users.length + 1}`,
@@ -43,12 +43,37 @@ export const createUser = ({ name, email, password }) => {
     email: String(email || "").trim().toLowerCase(),
     password,
     role: "farmer",
+    state: String(state || "").trim(),
+    district: String(district || "").trim(),
+    village: String(village || "").trim(),
+    city: String(city || "").trim(),
+    pincode: String(pincode || "").trim(),
+    latitude: latitude == null ? null : Number(latitude),
+    longitude: longitude == null ? null : Number(longitude),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
 
   fallbackStore.users.push(user);
   return user;
+};
+
+export const updateUserLocation = (userId, locationData) => {
+  const target = normalizeId(userId);
+  const user = fallbackStore.users.find((u) => normalizeId(u.id || u._id) === target);
+
+  if (user) {
+    if (locationData.state !== undefined) user.state = String(locationData.state || "").trim();
+    if (locationData.district !== undefined) user.district = String(locationData.district || "").trim();
+    if (locationData.village !== undefined) user.village = String(locationData.village || "").trim();
+    if (locationData.city !== undefined) user.city = String(locationData.city || "").trim();
+    if (locationData.pincode !== undefined) user.pincode = String(locationData.pincode || "").trim();
+    if (locationData.latitude !== undefined) user.latitude = locationData.latitude == null ? null : Number(locationData.latitude);
+    if (locationData.longitude !== undefined) user.longitude = locationData.longitude == null ? null : Number(locationData.longitude);
+    user.updatedAt = new Date().toISOString();
+  }
+
+  return user || null;
 };
 
 export const getFarmByOwner = (ownerId) => {

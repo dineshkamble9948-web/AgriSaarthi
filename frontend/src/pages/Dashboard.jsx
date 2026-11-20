@@ -44,7 +44,10 @@ export default function Dashboard({ setActivePage, farm, user }) {
   const soilText = farm?.soilType || "Soil profile pending";
   const { weather, loading: weatherLoading, error: weatherError, retry: retryWeather } = useWeather(
     farm?.location,
-    farm?.state
+    farm?.state,
+    farm?.latitude,
+    farm?.longitude,
+    farm?._id
   );
   const currentWeather = weather?.current;
 

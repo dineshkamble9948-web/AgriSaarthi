@@ -31,7 +31,8 @@ import {
   ShieldAlert,
   CloudRain,
   Droplets,
-  CheckCircle2
+  CheckCircle2,
+  LocateFixed
 } from "lucide-react";
 
 const moduleDetails = {
@@ -82,21 +83,64 @@ const moduleDetails = {
   }
 };
 
-function CropRecommendationPanel() {
-  const [form, setForm] = useState({
-    N: "",
-    P: "",
-    K: "",
+function CropRecommendationPanel({ farm }) {
+  const [form, setForm] = useState(() => ({
+    N: farm?.nitrogen != null ? String(farm.nitrogen) : "",
+    P: farm?.phosphorus != null ? String(farm.phosphorus) : "",
+    K: farm?.potassium != null ? String(farm.potassium) : "",
     temperature: "",
     humidity: "",
-    ph: "",
+    ph: farm?.ph != null ? String(farm.ph) : "",
     rainfall: ""
-  });
+  }));
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [autofilling, setAutofilling] = useState(false);
+  const [autofillSuccess, setAutofillSuccess] = useState("");
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [cachedTimestamp, setCachedTimestamp] = useState(null);
+
+  const autofillFromFarm = async () => {
+    setAutofilling(true);
+    setAutofillSuccess("");
+    try {
+      let temp = form.temperature;
+      let hum = form.humidity;
+      let rain = form.rainfall;
+
+      if (farm?.latitude && farm?.longitude) {
+        try {
+          const res = await api.get("/weather", {
+            params: { latitude: farm.latitude, longitude: farm.longitude }
+          });
+          const cur = res.data?.weather?.current;
+          if (cur) {
+            temp = cur.temperatureC != null ? String(Math.round(cur.temperatureC)) : temp;
+            hum = cur.humidityPercent != null ? String(Math.round(cur.humidityPercent)) : hum;
+            rain = cur.rain1hMm != null ? String(Math.max(20, Math.round(cur.rain1hMm * 24 * 7))) : (rain || "120");
+          }
+        } catch {
+          // Weather lookup non-blocking
+        }
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        N: farm?.nitrogen != null ? String(farm.nitrogen) : (prev.N || "90"),
+        P: farm?.phosphorus != null ? String(farm.phosphorus) : (prev.P || "42"),
+        K: farm?.potassium != null ? String(farm.potassium) : (prev.K || "43"),
+        ph: farm?.ph != null ? String(farm.ph) : (prev.ph || "6.5"),
+        temperature: temp || prev.temperature || "26",
+        humidity: hum || prev.humidity || "75",
+        rainfall: rain || prev.rainfall || "150"
+      }));
+
+      setAutofillSuccess("Populated from your saved farm location and soil profile!");
+    } finally {
+      setAutofilling(false);
+    }
+  };
 
   const getRecommendations = async (event) => {
     event.preventDefault();
@@ -161,7 +205,35 @@ function CropRecommendationPanel() {
   return (
     <div className="module-content-grid">
       <form className="panel" onSubmit={getRecommendations}>
-        <h3>Soil and climate inputs</h3>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
+          <h3 style={{ margin: 0 }}>Soil and climate inputs</h3>
+          {farm && (
+            <button
+              type="button"
+              onClick={autofillFromFarm}
+              disabled={autofilling}
+              className="secondary-button"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 12px",
+                fontSize: "12px",
+                fontWeight: "600",
+                borderRadius: "8px",
+                cursor: "pointer"
+              }}
+            >
+              <LocateFixed size={14} />
+              <span>{autofilling ? "Autofilling..." : "Use Saved Farm Location & Profile"}</span>
+            </button>
+          )}
+        </div>
+        {autofillSuccess && (
+          <div style={{ marginBottom: "12px", fontSize: "12px", color: "#15803d", fontWeight: "600", backgroundColor: "#f0fdf4", padding: "6px 10px", borderRadius: "6px", border: "1px solid #bbf7d0" }}>
+            ✓ {autofillSuccess}
+          </div>
+        )}
         <div className="module-form-grid">
           {inputFields.map((field) => (
             <label key={field.name}>
@@ -222,7 +294,7 @@ function CropRecommendationPanel() {
   );
 }
 
-function DiseaseDetectionPanel() {
+function DiseaseDetectionPanel({ farm }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState("");
   const [result, setResult] = useState(null);
@@ -526,11 +598,17 @@ function DiseaseDetectionPanel() {
 }
 
 function WeatherPanel({ farm }) {
-  const { weather, loading, error, retry } = useWeather(farm?.location, farm?.state);
+  const { weather, loading, error, retry } = useWeather(
+    farm?.location,
+    farm?.state,
+    farm?.latitude,
+    farm?.longitude,
+    farm?._id
+  );
   const location = weather?.location;
   const current = weather?.current;
   const timezoneOffsetSeconds = location?.timezoneOffsetSeconds || 0;
-  const hasFarmLocation = Boolean(farm?.location?.trim());
+  const hasFarmLocation = Boolean(farm?.location?.trim() || (farm?.latitude && farm?.longitude));
   const formatTime = (date) => formatWeatherTime(date, timezoneOffsetSeconds, {
     hour: "2-digit",
     minute: "2-digit"
@@ -641,8 +719,8 @@ function WeatherPanel({ farm }) {
   );
 }
 
-function SoilPanel() {
-  return <SoilIntelligence />;
+function SoilPanel({ farm }) {
+  return <SoilIntelligence farm={farm} />;
 }
 
 function DigitalTwinPanel({ farm, setActivePage, onFarmUpdated }) {
@@ -984,7 +1062,10 @@ function WhatIfPanel({ farm }) {
 function NextBestActionPanel({ farm }) {
   const { weather, loading: weatherLoading, error: weatherError, retry: retryWeather } = useWeather(
     farm?.location,
-    farm?.state
+    farm?.state,
+    farm?.latitude,
+    farm?.longitude,
+    farm?._id
   );
   const [recordsState, setRecordsState] = useState({ loading: true, error: "", records: [] });
   const [historyState, setHistoryState] = useState({ key: "", error: "", records: [] });
@@ -1311,9 +1392,17 @@ const marketErrorMessage = (requestError, fallback) => {
   return fallback;
 };
 
-function MarketPanel() {
-  const [draftFilters, setDraftFilters] = useState(EMPTY_MARKET_FILTERS);
-  const [activeFilters, setActiveFilters] = useState(EMPTY_MARKET_FILTERS);
+function MarketPanel({ farm }) {
+  const [draftFilters, setDraftFilters] = useState(() => ({
+    ...EMPTY_MARKET_FILTERS,
+    state: farm?.state || "",
+    district: farm?.district || ""
+  }));
+  const [activeFilters, setActiveFilters] = useState(() => ({
+    ...EMPTY_MARKET_FILTERS,
+    state: farm?.state || "",
+    district: farm?.district || ""
+  }));
   const [states, setStates] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [markets, setMarkets] = useState([]);

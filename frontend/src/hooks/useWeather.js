@@ -3,9 +3,9 @@ import api from "../services/api";
 
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 
-export default function useWeather(location, state) {
+export default function useWeather(location, state, latitude, longitude, farmId) {
   const [weather, setWeather] = useState(null);
-  const [loading, setLoading] = useState(Boolean(location));
+  const [loading, setLoading] = useState(Boolean(location || (latitude && longitude) || farmId));
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -16,7 +16,15 @@ export default function useWeather(location, state) {
 
   useEffect(() => {
     const farmLocation = typeof location === "string" ? location.trim() : "";
-    if (!farmLocation) {
+    const hasCoords =
+      latitude !== undefined &&
+      latitude !== null &&
+      latitude !== "" &&
+      longitude !== undefined &&
+      longitude !== null &&
+      longitude !== "";
+
+    if (!farmLocation && !hasCoords && !farmId) {
       return undefined;
     }
 
@@ -30,8 +38,10 @@ export default function useWeather(location, state) {
       try {
         const response = await api.get("/weather", {
           params: {
-            location: farmLocation,
-            ...(state ? { state } : {})
+            ...(farmLocation ? { location: farmLocation } : {}),
+            ...(state ? { state } : {}),
+            ...(hasCoords ? { latitude, longitude } : {}),
+            ...(farmId ? { farmId } : {})
           }
         });
         if (active) {
@@ -87,7 +97,7 @@ export default function useWeather(location, state) {
       active = false;
       window.clearInterval(intervalId);
     };
-  }, [location, state, refreshKey]);
+  }, [location, state, latitude, longitude, farmId, refreshKey]);
 
   return { weather, loading, error, isOffline, retry };
 }

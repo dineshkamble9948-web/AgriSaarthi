@@ -1,14 +1,17 @@
-
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import Farm from "../models/Farm.js";
 import {
   createUser,
   findUserByEmail,
   findUserById,
-  isFallbackMode
+  isFallbackMode,
+  updateUserLocation,
+  getFarmByOwner
 } from "../config/fallbackStore.js";
+import { reverseGeocode } from "../services/reverseGeocodeService.js";
 
 const generateToken = (userId) => {
   return jwt.sign(
@@ -16,6 +19,19 @@ const generateToken = (userId) => {
     process.env.JWT_SECRET || "agrisaarthi-dev-secret",
     { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
   );
+};
+
+export const isStrongPassword = (password) => {
+  if (typeof password !== "string") return false;
+  if (password.length < 8) return false;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+  const isOnlyNumbers = /^[0-9]+$/.test(password);
+  const isOnlyAlphabets = /^[A-Za-z]+$/.test(password);
+
+  return hasUpper && hasLower && hasNumber && hasSpecial && !isOnlyNumbers && !isOnlyAlphabets;
 };
 
 let demoUserCreation;
@@ -35,7 +51,14 @@ const getDemoUser = async () => {
       const userData = {
         name: "AgriSaarthi Demo",
         email,
-        password: await bcrypt.hash(randomBytes(32).toString("hex"), 12)
+        password: await bcrypt.hash(randomBytes(32).toString("hex"), 12),
+        state: "Karnataka",
+        district: "Bengaluru Urban",
+        city: "Bengaluru",
+        village: "Ashokanagar",
+        pincode: "560001",
+        latitude: 12.9716,
+        longitude: 77.5946
       };
 
       if (isFallbackMode()) {
@@ -83,7 +106,15 @@ export const demoLogin = async (req, res) => {
       user: {
         id: user._id || user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role || "farmer",
+        state: user.state || "Karnataka",
+        district: user.district || "Bengaluru Urban",
+        village: user.village || "",
+        city: user.city || "Bengaluru",
+        pincode: user.pincode || "560001",
+        latitude: user.latitude ?? 12.9716,
+        longitude: user.longitude ?? 77.5946
       }
     });
   } catch (error) {
@@ -124,10 +155,10 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    if (String(password).length < 8) {
+    if (!isStrongPassword(password)) {
       return res.status(400).json({
         success: false,
-        message: "Password must be at least 8 characters"
+        message: "Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, one number, and one special character."
       });
     }
 
@@ -173,7 +204,15 @@ export const registerUser = async (req, res) => {
       user: {
         id: user._id || user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role || "farmer",
+        state: user.state || "",
+        district: user.district || "",
+        village: user.village || "",
+        city: user.city || "",
+        pincode: user.pincode || "",
+        latitude: user.latitude ?? null,
+        longitude: user.longitude ?? null
       }
     });
   } catch (error) {
@@ -237,7 +276,15 @@ export const loginUser = async (req, res) => {
       user: {
         id: user._id || user.id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role || "farmer",
+        state: user.state || "",
+        district: user.district || "",
+        village: user.village || "",
+        city: user.city || "",
+        pincode: user.pincode || "",
+        latitude: user.latitude ?? null,
+        longitude: user.longitude ?? null
       }
     });
   } catch (error) {
@@ -251,18 +298,121 @@ export const loginUser = async (req, res) => {
 
 export const getMe = async (req, res) => {
   try {
+    const user = req.user;
     return res.json({
       success: true,
       user: {
-        id: req.user._id,
-        name: req.user.name,
-        email: req.user.email
+        id: user._id || user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role || "farmer",
+        state: user.state || "",
+        district: user.district || "",
+        village: user.village || "",
+        city: user.city || "",
+        pincode: user.pincode || "",
+        latitude: user.latitude ?? null,
+        longitude: user.longitude ?? null
       }
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Could not fetch profile"
+    });
+  }
+};
+
+export const updateLocation = async (req, res) => {
+  try {
+    const { state, district, village, city, pincode, latitude, longitude } = req.body;
+
+    const lat = latitude !== "" && latitude != null ? Number(latitude) : null;
+    const lon = longitude !== "" && longitude != null ? Number(longitude) : null;
+
+    if (
+      (lat !== null && (!Number.isFinite(lat) || lat < -90 || lat > 90)) ||
+      (lon !== null && (!Number.isFinite(lon) || lon < -180 || lon > 180))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Latitude must be between -90 and 90, and longitude between -180 and 180."
+      });
+    }
+
+    const locationPayload = {
+      state: String(state || "").trim(),
+      district: String(district || "").trim(),
+      village: String(village || "").trim(),
+      city: String(city || "").trim(),
+      pincode: String(pincode || "").trim(),
+      latitude: lat,
+      longitude: lon
+    };
+
+    let updatedUser;
+    if (isFallbackMode()) {
+      updatedUser = updateUserLocation(req.user._id, locationPayload);
+      const farm = getFarmByOwner(req.user._id);
+      if (farm) {
+        Object.assign(farm, {
+          ...locationPayload,
+          location: locationPayload.village || locationPayload.city || farm.location
+        });
+      }
+    } else {
+      updatedUser = await User.findByIdAndUpdate(
+        req.user._id,
+        locationPayload,
+        { new: true, runValidators: true }
+      );
+      // Synchronize with user's primary farm if one exists
+      await Farm.findOneAndUpdate(
+        { owner: req.user._id },
+        {
+          ...locationPayload,
+          ...(locationPayload.village || locationPayload.city
+            ? { location: locationPayload.village || locationPayload.city }
+            : {})
+        }
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Your location has been detected and saved successfully!",
+      user: {
+        id: updatedUser._id || updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role || "farmer",
+        ...locationPayload
+      }
+    });
+  } catch (error) {
+    console.error("Location update error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Could not save location details."
+    });
+  }
+};
+
+export const reverseGeocodeEndpoint = async (req, res) => {
+  try {
+    const { latitude, longitude } = req.query;
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        message: "Provide both latitude and longitude query parameters."
+      });
+    }
+    const result = await reverseGeocode(latitude, longitude);
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
     });
   }
 };

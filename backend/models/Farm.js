@@ -39,6 +39,18 @@ const farmSchema = new mongoose.Schema(
       default: ""
     },
 
+    city: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    pincode: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
     latitude: {
       type: Number,
       min: -90,

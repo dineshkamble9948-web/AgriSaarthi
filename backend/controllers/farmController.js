@@ -1,5 +1,6 @@
 import Farm from "../models/Farm.js";
 import FarmPlot from "../models/FarmPlot.js";
+import User from "../models/User.js";
 import {
   createFarmEntry,
   createFarmPlotEntry,
@@ -10,8 +11,10 @@ import {
   listFarmsByOwner,
   updateFarmEntry,
   updateFarmPlotEntry,
-  upsertFarm
+  upsertFarm,
+  updateUserLocation
 } from "../config/fallbackStore.js";
+import { reverseGeocode } from "../services/reverseGeocodeService.js";
 import {
   calculateFarmBoundaryAreaSquareMeters,
   FarmInputError,
@@ -30,6 +33,8 @@ function buildFarmPayload(body) {
     state,
     village,
     district,
+    city,
+    pincode,
     area,
     areaUnit = "acres",
     soilType,
@@ -68,6 +73,8 @@ function buildFarmPayload(body) {
     state: String(state || "Karnataka").trim(),
     village: String(village || location).trim(),
     district: String(district || "").trim(),
+    city: String(city || village || location).trim(),
+    pincode: String(pincode || "").trim(),
     ...coordinates,
     boundary,
     area: parsedArea,
@@ -172,6 +179,22 @@ export const saveFarm = async (req, res) => {
           { new: true, runValidators: true }
         )
         : await Farm.create({ ...payload, owner: req.user._id });
+    }
+
+    // Synchronize location to user profile
+    const userLocation = {
+      state: payload.state,
+      district: payload.district,
+      village: payload.village,
+      city: payload.city,
+      pincode: payload.pincode,
+      latitude: payload.latitude,
+      longitude: payload.longitude
+    };
+    if (isFallbackMode()) {
+      updateUserLocation(req.user._id, userLocation);
+    } else {
+      await User.findByIdAndUpdate(req.user._id, userLocation).catch(() => {});
     }
 
     return res.status(200).json({
@@ -282,5 +305,24 @@ export const updateFarmPlot = async (req, res) => {
     return res.json({ success: true, plot: updatedPlot });
   } catch (error) {
     return sendControllerError(res, error, "Could not update farm plot.");
+  }
+};
+
+export const reverseGeocodeFarm = async (req, res) => {
+  try {
+    const { latitude, longitude } = req.query;
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        message: "Provide both latitude and longitude query parameters."
+      });
+    }
+    const result = await reverseGeocode(latitude, longitude);
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
   }
 };

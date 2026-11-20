@@ -85,7 +85,7 @@ function App() {
   }
 
   if (!farm) {
-    return <FarmSetup onFarmSaved={handleFarmSaved} />;
+    return <FarmSetup onFarmSaved={handleFarmSaved} userLocation={user} />;
   }
 
   return (

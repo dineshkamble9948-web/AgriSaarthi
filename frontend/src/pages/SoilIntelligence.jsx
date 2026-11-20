@@ -67,8 +67,11 @@ const soilLocation = (assessment) => (
   `${Number(assessment.location.latitude).toFixed(4)}, ${Number(assessment.location.longitude).toFixed(4)}`
 );
 
-export default function SoilIntelligence() {
-  const [coordinates, setCoordinates] = useState(EMPTY_COORDINATES);
+export default function SoilIntelligence({ farm = null }) {
+  const [coordinates, setCoordinates] = useState(() => ({
+    latitude: farm?.latitude != null ? String(farm.latitude) : "",
+    longitude: farm?.longitude != null ? String(farm.longitude) : ""
+  }));
   const [assessment, setAssessment] = useState(null);
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
@@ -80,13 +83,13 @@ export default function SoilIntelligence() {
   const [recommendationError, setRecommendationError] = useState("");
   const [crop, setCrop] = useState("Rice");
   const [otherCrop, setOtherCrop] = useState("");
-  const [soilPh, setSoilPh] = useState("");
+  const [soilPh, setSoilPh] = useState(() => (farm?.ph != null ? String(farm.ph) : ""));
   const [npkUnit, setNpkUnit] = useState("kg/ha");
-  const [npkValues, setNpkValues] = useState({
-    nitrogen: "",
-    phosphorus: "",
-    potassium: ""
-  });
+  const [npkValues, setNpkValues] = useState(() => ({
+    nitrogen: farm?.nitrogen != null ? String(farm.nitrogen) : "",
+    phosphorus: farm?.phosphorus != null ? String(farm.phosphorus) : "",
+    potassium: farm?.potassium != null ? String(farm.potassium) : ""
+  }));
   const [npkStatuses, setNpkStatuses] = useState({
     nitrogen: "unknown",
     phosphorus: "unknown",
@@ -106,6 +109,11 @@ export default function SoilIntelligence() {
           setCoordinates({
             latitude: String(latestSoil.location.latitude),
             longitude: String(latestSoil.location.longitude)
+          });
+        } else if (farm?.latitude != null && farm?.longitude != null) {
+          setCoordinates({
+            latitude: String(farm.latitude),
+            longitude: String(farm.longitude)
           });
         }
         setRecommendation(latestSoil?.fertilizerRecommendation || null);

@@ -7,7 +7,8 @@ import {
   getMyFarms,
   saveFarm,
   getMyFarm,
-  updateFarmPlot
+  updateFarmPlot,
+  reverseGeocodeFarm
 } from "../controllers/farmController.js";
 import {
   createCropCycle,
@@ -30,6 +31,7 @@ const router = express.Router();
 
 router.use(protect);
 
+router.get("/reverse-geocode", reverseGeocodeFarm);
 router.get("/me", getMyFarm);
 router.get("/", getMyFarms);
 

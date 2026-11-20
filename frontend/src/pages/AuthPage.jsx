@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Sprout, Lock, Mail, User, ArrowRight, Globe } from "lucide-react";
+import { Sprout, Lock, Mail, User, ArrowRight, Globe, Eye, EyeOff, CheckCircle2, Circle } from "lucide-react";
 import api from "../services/api";
 import { useLanguage } from "../utils/LanguageContext";
 
@@ -14,9 +14,40 @@ export default function AuthPage({ onAuth, initialMode = "register" }) {
     password: ""
   });
 
+  const [showPassword, setShowPassword] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const passwordChecks = {
+    length: form.password.length >= 8,
+    upper: /[A-Z]/.test(form.password),
+    lower: /[a-z]/.test(form.password),
+    number: /[0-9]/.test(form.password),
+    special: /[^A-Za-z0-9]/.test(form.password),
+    notOnlyNumbersOrLetters: !/^[A-Za-z]+$/.test(form.password) && !/^\d+$/.test(form.password) && form.password.length > 0
+  };
+
+  const isPasswordValid =
+    passwordChecks.length &&
+    passwordChecks.upper &&
+    passwordChecks.lower &&
+    passwordChecks.number &&
+    passwordChecks.special &&
+    passwordChecks.notOnlyNumbersOrLetters;
+
+  const fulfilledCount = [
+    passwordChecks.length,
+    passwordChecks.upper,
+    passwordChecks.lower,
+    passwordChecks.number,
+    passwordChecks.special
+  ].filter(Boolean).length;
+
+  const strengthLabel =
+    fulfilledCount <= 2 ? t("pwdWeak") : fulfilledCount <= 4 ? t("pwdModerate") : t("pwdStrong");
+  const strengthColor =
+    fulfilledCount <= 2 ? "#ef4444" : fulfilledCount <= 4 ? "#f59e0b" : "#16a34a";
 
   const handleChange = (e) => {
     setForm({
@@ -30,9 +61,15 @@ export default function AuthPage({ onAuth, initialMode = "register" }) {
 
     setError("");
 
-    if (isRegister && !consentGiven) {
-      setError(t("consentRequiredError"));
-      return;
+    if (isRegister) {
+      if (!isPasswordValid) {
+        setError(t("pwdErrorDetails"));
+        return;
+      }
+      if (!consentGiven) {
+        setError(t("consentRequiredError"));
+        return;
+      }
     }
 
     setLoading(true);
@@ -196,16 +233,93 @@ export default function AuthPage({ onAuth, initialMode = "register" }) {
             <div className="auth-input">
               <Lock size={18} />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder={t("enterPassword")}
                 value={form.password}
                 onChange={handleChange}
                 autoComplete={isRegister ? "new-password" : "current-password"}
-                minLength={isRegister ? 8 : undefined}
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#6b7280",
+                  padding: "6px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "color 0.15s"
+                }}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
+
+            {isRegister && form.password.length > 0 && (
+              <div style={{ marginTop: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "12px", color: "#6b7280" }}>
+                    {t("password")}: <strong style={{ color: strengthColor }}>{strengthLabel}</strong>
+                  </span>
+                  <span style={{ fontSize: "11px", color: "#6b7280" }}>{fulfilledCount} / 5</span>
+                </div>
+                <div style={{ width: "100%", height: "4px", backgroundColor: "#e5e7eb", borderRadius: "2px", overflow: "hidden" }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${(fulfilledCount / 5) * 100}%`,
+                      backgroundColor: strengthColor,
+                      transition: "width 0.3s ease, background-color 0.3s ease"
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {isRegister && (
+              <div
+                style={{
+                  marginTop: "10px",
+                  padding: "10px 12px",
+                  backgroundColor: "#f9fafb",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "12px"
+                }}
+              >
+                <div style={{ fontWeight: 600, color: "#374151", marginBottom: "6px" }}>
+                  {t("passwordMustInclude")}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: passwordChecks.length ? "#15803d" : "#6b7280" }}>
+                    {passwordChecks.length ? <CheckCircle2 size={14} color="#15803d" /> : <Circle size={14} color="#9ca3af" />}
+                    <span>{t("pwdLength")}</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: passwordChecks.upper ? "#15803d" : "#6b7280" }}>
+                    {passwordChecks.upper ? <CheckCircle2 size={14} color="#15803d" /> : <Circle size={14} color="#9ca3af" />}
+                    <span>{t("pwdUpper")}</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: passwordChecks.lower ? "#15803d" : "#6b7280" }}>
+                    {passwordChecks.lower ? <CheckCircle2 size={14} color="#15803d" /> : <Circle size={14} color="#9ca3af" />}
+                    <span>{t("pwdLower")}</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: passwordChecks.number ? "#15803d" : "#6b7280" }}>
+                    {passwordChecks.number ? <CheckCircle2 size={14} color="#15803d" /> : <Circle size={14} color="#9ca3af" />}
+                    <span>{t("pwdNumber")}</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: passwordChecks.special ? "#15803d" : "#6b7280" }}>
+                    {passwordChecks.special ? <CheckCircle2 size={14} color="#15803d" /> : <Circle size={14} color="#9ca3af" />}
+                    <span>{t("pwdSpecial")}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {isRegister && (

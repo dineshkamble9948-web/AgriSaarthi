@@ -1,6 +1,6 @@
 
 import { useMemo, useState } from "react";
-import { Sprout, MapPin, Ruler, Droplets, LocateFixed, Undo2, Trash2 } from "lucide-react";
+import { Sprout, MapPin, Ruler, Droplets, LocateFixed, Undo2, Trash2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import api from "../services/api";
 import FarmLocationMap from "../components/FarmLocationMap";
 import {
@@ -15,15 +15,19 @@ const SQUARE_METERS_PER_HECTARE = 10000;
 export default function FarmSetup({
   onFarmSaved,
   existingFarm = null,
+  userLocation = null,
   createNewFarm = false,
   embedded = false,
   onCancel
 }) {
   const [form, setForm] = useState(() => ({
     farmName: existingFarm?.farmName || "",
-    location: existingFarm?.location || "",
-    state: existingFarm?.state || "Karnataka",
-    district: existingFarm?.district || "",
+    location: existingFarm?.location || userLocation?.village || userLocation?.city || "",
+    state: existingFarm?.state || userLocation?.state || "Karnataka",
+    district: existingFarm?.district || userLocation?.district || "",
+    village: existingFarm?.village || userLocation?.village || "",
+    city: existingFarm?.city || userLocation?.city || "",
+    pincode: existingFarm?.pincode || userLocation?.pincode || "",
     area: existingFarm?.area == null ? "" : String(existingFarm.area),
     areaUnit: existingFarm?.areaUnit || "acres",
     soilType: existingFarm?.soilType || "Red",
@@ -33,11 +37,14 @@ export default function FarmSetup({
     potassium: existingFarm?.potassium == null ? "" : String(existingFarm.potassium),
     waterSource: existingFarm?.waterSource || "Borewell",
     irrigationType: existingFarm?.irrigationType || "Unknown",
-    latitude: existingFarm?.latitude == null ? "" : String(existingFarm.latitude),
-    longitude: existingFarm?.longitude == null ? "" : String(existingFarm.longitude)
+    latitude: existingFarm?.latitude != null ? String(existingFarm.latitude) : (userLocation?.latitude != null ? String(userLocation.latitude) : ""),
+    longitude: existingFarm?.longitude != null ? String(existingFarm.longitude) : (userLocation?.longitude != null ? String(userLocation.longitude) : "")
   }));
 
   const [loading, setLoading] = useState(false);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationSuccess, setLocationSuccess] = useState("");
+  const [detectedAddress, setDetectedAddress] = useState("");
   const [error, setError] = useState("");
   const [locationError, setLocationError] = useState("");
   const [boundaryPoints, setBoundaryPoints] = useState(
@@ -73,22 +80,89 @@ export default function FarmSetup({
     }));
   };
 
-  const requestFarmLocation = () => {
+  const detectCurrentLocation = () => {
     setLocationError("");
+    setLocationSuccess("");
+    setDetectedAddress("");
+
     if (!navigator.geolocation) {
-      setLocationError("Location access is not available in this browser. You can enter coordinates or select the map manually.");
+      setLocationError("GPS location access is not supported by your browser. Please enter your location manually below.");
       return;
     }
 
+    setDetectingLocation(true);
+
     navigator.geolocation.getCurrentPosition(
-      ({ coords }) => updateCenter([coords.latitude, coords.longitude]),
-      (geoError) => {
-        const message = geoError.code === geoError.PERMISSION_DENIED
-          ? "Location permission was not granted. You can enter coordinates or select the map manually."
-          : "Could not read your current location. You can enter coordinates or select the map manually.";
-        setLocationError(message);
+      async ({ coords }) => {
+        const lat = coords.latitude;
+        const lon = coords.longitude;
+
+        try {
+          const { data } = await api.get("/farms/reverse-geocode", {
+            params: { latitude: lat, longitude: lon }
+          });
+
+          setForm((prev) => ({
+            ...prev,
+            state: data.state || prev.state,
+            district: data.district || prev.district,
+            village: data.village || prev.village,
+            city: data.city || prev.city,
+            pincode: data.pincode || prev.pincode,
+            location: data.village || data.city || data.district || prev.location || "Farm Location",
+            latitude: Number(lat).toFixed(6),
+            longitude: Number(lon).toFixed(6)
+          }));
+
+          const addressSummary =
+            data.formattedAddress ||
+            [data.village, data.city, data.district, data.state, data.pincode].filter(Boolean).join(", ");
+          setDetectedAddress(addressSummary);
+
+          // Automatically save location to user profile in MongoDB
+          try {
+            await api.post("/auth/location", {
+              state: data.state || form.state,
+              district: data.district || form.district,
+              village: data.village || form.village,
+              city: data.city || form.city,
+              pincode: data.pincode || form.pincode,
+              latitude: lat,
+              longitude: lon
+            });
+          } catch (saveErr) {
+            console.warn("Auto-save user profile location warning:", saveErr?.message);
+          }
+
+          setLocationSuccess("Your location has been detected and saved successfully!");
+        } catch (apiErr) {
+          // If reverse geocoding request fails, still save coordinates
+          setForm((prev) => ({
+            ...prev,
+            latitude: Number(lat).toFixed(6),
+            longitude: Number(lon).toFixed(6)
+          }));
+          setLocationError(
+            apiErr.response?.data?.message ||
+            "Retrieved GPS coordinates, but could not resolve address details. Please fill in state/district manually."
+          );
+        } finally {
+          setDetectingLocation(false);
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      (geoError) => {
+        setDetectingLocation(false);
+        let msg = "Could not detect your current location. Please enter your location details manually.";
+        if (geoError.code === geoError.PERMISSION_DENIED) {
+          msg = "Location permission was denied. Please allow location access in your browser settings, or enter your location manually below.";
+        } else if (geoError.code === geoError.POSITION_UNAVAILABLE) {
+          msg = "GPS signal or location provider unavailable. Please enter your location manually.";
+        } else if (geoError.code === geoError.TIMEOUT) {
+          msg = "Location detection timed out. Please try again or enter your location manually.";
+        }
+        setLocationError(msg);
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );
   };
 
@@ -200,6 +274,123 @@ export default function FarmSetup({
             : "Enter your farm information to receive personalized agricultural recommendations."}
         </p>
 
+        {/* Automatic Location Detection Card */}
+        <div
+          style={{
+            margin: "20px 0 24px 0",
+            padding: "20px",
+            backgroundColor: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: "12px"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+            <MapPin size={22} color="#15803d" />
+            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#166534" }}>
+              Agricultural Location Setup
+            </h3>
+          </div>
+          <p style={{ margin: "0 0 16px 0", fontSize: "13px", color: "#374151", lineHeight: "1.5" }}>
+            Click below to automatically detect your coordinates and populate your village, district, state, and pincode via GPS, or enter them manually.
+          </p>
+
+          <button
+            type="button"
+            onClick={detectCurrentLocation}
+            disabled={detectingLocation}
+            className="primary-button"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              width: "100%",
+              padding: "14px 20px",
+              fontSize: "15px",
+              fontWeight: "700",
+              letterSpacing: "0.5px",
+              borderRadius: "10px",
+              backgroundColor: "#15803d",
+              color: "#ffffff",
+              boxShadow: "0 4px 12px rgba(21, 128, 61, 0.25)",
+              cursor: detectingLocation ? "wait" : "pointer",
+              transition: "all 0.2s ease"
+            }}
+          >
+            {detectingLocation ? (
+              <>
+                <Loader2 size={20} className="animate-spin" />
+                <span>Detecting your location via GPS...</span>
+              </>
+            ) : (
+              <>
+                <MapPin size={20} />
+                <span>📍 USE MY CURRENT LOCATION</span>
+              </>
+            )}
+          </button>
+
+          {locationSuccess && (
+            <div
+              style={{
+                marginTop: "14px",
+                padding: "12px 16px",
+                backgroundColor: "#dcfce7",
+                border: "1px solid #86efac",
+                borderRadius: "8px",
+                color: "#166534",
+                fontSize: "14px",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px"
+              }}
+            >
+              <CheckCircle2 size={18} color="#15803d" />
+              <span>{locationSuccess}</span>
+            </div>
+          )}
+
+          {detectedAddress && (
+            <div
+              style={{
+                marginTop: "10px",
+                padding: "10px 14px",
+                backgroundColor: "#ffffff",
+                border: "1px dashed #86efac",
+                borderRadius: "8px",
+                fontSize: "13px",
+                color: "#166534"
+              }}
+            >
+              <strong>Detected Address:</strong> {detectedAddress}
+              <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "2px" }}>
+                You can review and edit any detected details manually below.
+              </div>
+            </div>
+          )}
+
+          {locationError && (
+            <div
+              style={{
+                marginTop: "14px",
+                padding: "12px 16px",
+                backgroundColor: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: "8px",
+                color: "#b91c1c",
+                fontSize: "13px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px"
+              }}
+            >
+              <AlertCircle size={18} color="#dc2626" />
+              <span>{locationError}</span>
+            </div>
+          )}
+        </div>
+
         <div className="farm-form-grid">
 
           <div className="farm-input-group">
@@ -214,33 +405,64 @@ export default function FarmSetup({
           </div>
 
           <div className="farm-input-group">
-            <label>Village / City *</label>
-            <input
-              name="location"
-              value={form.location}
-              onChange={handleChange}
-              placeholder="Enter your farm location"
-              required
-            />
-          </div>
-
-          <div className="farm-input-group">
-            <label>State</label>
+            <label>State *</label>
             <input
               name="state"
               value={form.state}
               onChange={handleChange}
+              placeholder="e.g. Karnataka"
               required
             />
           </div>
 
           <div className="farm-input-group">
-            <label>District</label>
+            <label>District *</label>
             <input
               name="district"
               value={form.district}
               onChange={handleChange}
-              placeholder="Optional"
+              placeholder="e.g. Bengaluru Urban"
+              required
+            />
+          </div>
+
+          <div className="farm-input-group">
+            <label>Village / Locality</label>
+            <input
+              name="village"
+              value={form.village}
+              onChange={handleChange}
+              placeholder="e.g. Yelahanka or nearby village"
+            />
+          </div>
+
+          <div className="farm-input-group">
+            <label>City / Town</label>
+            <input
+              name="city"
+              value={form.city}
+              onChange={handleChange}
+              placeholder="e.g. Bengaluru"
+            />
+          </div>
+
+          <div className="farm-input-group">
+            <label>Pincode</label>
+            <input
+              name="pincode"
+              value={form.pincode}
+              onChange={handleChange}
+              placeholder="e.g. 560001"
+            />
+          </div>
+
+          <div className="farm-input-group">
+            <label>Location Label / General Address</label>
+            <input
+              name="location"
+              value={form.location}
+              onChange={handleChange}
+              placeholder="Enter your farm location or landmark"
             />
           </div>
 
@@ -319,9 +541,9 @@ export default function FarmSetup({
             </div>
           </div>
 
-          <button type="button" className="farm-location-action" onClick={requestFarmLocation}>
-            <LocateFixed size={16} />
-            Use my current location
+          <button type="button" className="farm-location-action" onClick={detectCurrentLocation} disabled={detectingLocation}>
+            {detectingLocation ? <Loader2 size={16} className="animate-spin" /> : <LocateFixed size={16} />}
+            {detectingLocation ? "Detecting location..." : "Use my current location"}
           </button>
 
           <div className="farm-form-grid farm-coordinate-grid">

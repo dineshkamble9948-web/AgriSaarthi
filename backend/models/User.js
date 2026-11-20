@@ -29,6 +29,50 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["farmer", "admin"],
       default: "farmer"
+    },
+
+    state: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    district: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    village: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    city: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    pincode: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    latitude: {
+      type: Number,
+      min: -90,
+      max: 90,
+      default: null
+    },
+
+    longitude: {
+      type: Number,
+      min: -180,
+      max: 180,
+      default: null
     }
   },
   {
