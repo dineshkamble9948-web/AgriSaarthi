@@ -3,7 +3,9 @@ import {
   getKarnatakaTaluks,
   getKarnatakaSoilProfile,
   getKarnatakaRainfallProfile,
-  enhanceCropRecommendations
+  enhanceCropRecommendations,
+  getDistrictCropYieldStatistics,
+  calculateSoilWaterBalance
 } from "../services/karnatakaAgriculturalService.js";
 
 const REQUEST_TIMEOUT_MS = 25000;
@@ -138,6 +140,45 @@ export const getRegionalRainfall = (req, res) => {
     return res.status(200).json({
       success: true,
       rainfall
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Controller to fetch official Directorate of Economics & Statistics (DES) crop yield benchmarks
+ */
+export const getRegionalCropYields = (req, res) => {
+  try {
+    const { district, crop, area } = req.query;
+    const yieldStats = getDistrictCropYieldStatistics(district, crop, area);
+    return res.status(200).json({
+      success: true,
+      data: yieldStats,
+      yieldStats
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Controller to compute agro-climatic root zone soil moisture balance
+ */
+export const getRegionalSoilMoisture = (req, res) => {
+  try {
+    const { soilType, district, temperatureC, humidityPercent, rainfallMm } = req.query;
+    const weather = {
+      temperatureC: temperatureC != null ? Number(temperatureC) : 28,
+      humidityPercent: humidityPercent != null ? Number(humidityPercent) : 65,
+      rainfallMm: rainfallMm != null ? Number(rainfallMm) : 0
+    };
+    const moisture = calculateSoilWaterBalance({ soilType, weather, district });
+    return res.status(200).json({
+      success: true,
+      data: moisture,
+      moisture
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

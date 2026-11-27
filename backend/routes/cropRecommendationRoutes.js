@@ -4,7 +4,9 @@ import {
   getDistricts,
   getTaluks,
   getRegionalSoil,
-  getRegionalRainfall
+  getRegionalRainfall,
+  getRegionalCropYields,
+  getRegionalSoilMoisture
 } from "../controllers/cropRecommendationController.js";
 import protect from "../middleware/authMiddleware.js";
 
@@ -15,6 +17,8 @@ router.get("/karnataka/districts", getDistricts);
 router.get("/karnataka/taluks", getTaluks);
 router.get("/karnataka/soil", getRegionalSoil);
 router.get("/karnataka/rainfall", getRegionalRainfall);
+router.get("/karnataka/crop-yields", getRegionalCropYields);
+router.get("/karnataka/soil-moisture", getRegionalSoilMoisture);
 
 // Recommendation endpoint protected by user authentication
 router.post("/recommend", protect, recommendCrops);

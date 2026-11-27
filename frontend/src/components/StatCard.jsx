@@ -5,10 +5,17 @@ export default function StatCard({
   subtitle,
   icon: Icon,
   color,
-  trend
+  trend,
+  onClick
 }) {
   return (
-    <div className="stat-card">
+    <div
+      className={`stat-card ${onClick ? "stat-card-clickable" : ""}`}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      style={onClick ? { cursor: "pointer" } : undefined}
+    >
       <div className="stat-top">
         <span>{title}</span>
 

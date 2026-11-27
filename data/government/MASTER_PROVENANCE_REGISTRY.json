@@ -146,6 +146,21 @@
       "license": "Official Public Contact Information",
       "processing_method": "Compiled official landlines, mobile contact desks, office timings, and Google Map directions links.",
       "reliability_limitations": "Staff transfers and line maintenance may cause temporary unavailability of landlines. Kisan Call Center (1800-180-1551) provided as backup."
+    },
+    {
+      "dataset_id": "GOV-YIELD-DES-10",
+      "dataset_name": "Karnataka District-Wise Crop Yield Benchmarks and UAS Package of Practices Targets",
+      "department": "Directorate of Economics and Statistics (DES), Ministry of Agriculture & Farmers Welfare & UAS Raichur",
+      "source_url": "https://desagri.gov.in/ & https://data.gov.in/catalog/district-wise-season-wise-crop-production-statistics-0",
+      "local_path": "data/government/crop_production/district_crop_yield_benchmarks.json",
+      "geographic_coverage": "Karnataka (30 Districts, Major Kharif/Rabi Crops)",
+      "collection_period": "Historical Census Series & UAS Package of Practices",
+      "last_updated": "2026-11-27",
+      "download_date": "2026-11-27",
+      "file_format": "JSON",
+      "license": "Government Open Data License - India (GODL)",
+      "processing_method": "Derived district-level average historical yields (Quintals/Acre and Tonnes/Ha) and UAS Package of Practices (POP) potential yields across major crops.",
+      "reliability_limitations": "Statistical district baseline. Actual farmer yield varies based on irrigation, pest incidence, and weather conditions."
     }
   ]
 }
