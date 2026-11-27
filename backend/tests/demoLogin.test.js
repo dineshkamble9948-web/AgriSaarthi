@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { demoLogin } from "../controllers/authController.js";
+import { demoLogin, loginUser } from "../controllers/authController.js";
 import { findUserByEmail, setFallbackMode } from "../config/fallbackStore.js";
 
 const setDemoTestEnvironment = (t) => {
@@ -68,4 +68,21 @@ test("demo login is unavailable outside local development", async (t) => {
   const productionResponse = createResponse();
   await demoLogin({ socket: { remoteAddress: "127.0.0.1" } }, productionResponse);
   assert.equal(productionResponse.statusCode, 404);
+});
+
+test("standard login with demo credentials (demo@agrisaarthi.local / Password@123) succeeds", async (t) => {
+  setDemoTestEnvironment(t);
+  const req = {
+    body: {
+      email: "demo@agrisaarthi.local",
+      password: "Password@123"
+    }
+  };
+  const res = createResponse();
+  await loginUser(req, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.success, true);
+  assert.equal(res.body.user.email, "demo@agrisaarthi.local");
+  assert.ok(res.body.token);
 });

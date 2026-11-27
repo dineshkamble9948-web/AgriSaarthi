@@ -10,7 +10,8 @@ import {
   isFallbackMode,
   updateUserLocation,
   updateUserProfile,
-  getFarmByOwner
+  getFarmByOwner,
+  createFarmEntry
 } from "../config/fallbackStore.js";
 import { reverseGeocode } from "../services/reverseGeocodeService.js";
 
@@ -35,6 +36,47 @@ export const isStrongPassword = (password) => {
   return hasUpper && hasLower && hasNumber && hasSpecial && !isOnlyNumbers && !isOnlyAlphabets;
 };
 
+const ensureDemoFarm = async (userId) => {
+  if (isFallbackMode()) {
+    let farm = getFarmByOwner(userId);
+    if (!farm) {
+      createFarmEntry(userId, {
+        farmName: "Tungabhadra Model Farm",
+        location: "Raichur Rural",
+        state: "Karnataka",
+        district: "Raichur",
+        village: "Raichur",
+        area: 2.5,
+        areaUnit: "acres",
+        soilType: "Black",
+        latitude: 16.205,
+        longitude: 77.355
+      });
+    }
+  } else {
+    try {
+      let farm = await Farm.findOne({ owner: userId });
+      if (!farm) {
+        await Farm.create({
+          owner: userId,
+          farmName: "Tungabhadra Model Farm",
+          location: "Raichur Rural",
+          state: "Karnataka",
+          district: "Raichur",
+          village: "Raichur",
+          area: 2.5,
+          areaUnit: "acres",
+          soilType: "Black",
+          latitude: 16.205,
+          longitude: 77.355
+        });
+      }
+    } catch (e) {
+      console.warn("Could not auto-create demo farm:", e.message);
+    }
+  }
+};
+
 let demoUserCreation;
 
 const getDemoUser = async () => {
@@ -43,38 +85,53 @@ const getDemoUser = async () => {
       const email = "demo@agrisaarthi.local";
       const existingUser = isFallbackMode()
         ? findUserByEmail(email)
-        : await User.findOne({ email });
+        : await User.findOne({ email }).select("+password");
 
       if (existingUser) {
+        const isMatch = await bcrypt.compare("Password@123", existingUser.password || "");
+        if (!isMatch) {
+          const newHash = await bcrypt.hash("Password@123", 12);
+          if (!isFallbackMode()) {
+            await User.updateOne({ email }, { password: newHash });
+          }
+          existingUser.password = newHash;
+        }
+        await ensureDemoFarm(existingUser._id || existingUser.id);
         return existingUser;
       }
 
       const userData = {
         name: "AgriSaarthi Demo",
         email,
-        password: await bcrypt.hash(randomBytes(32).toString("hex"), 12),
+        password: await bcrypt.hash("Password@123", 12),
         state: "Karnataka",
-        district: "Bengaluru Urban",
-        city: "Bengaluru",
-        village: "Ashokanagar",
-        pincode: "560001",
-        latitude: 12.9716,
-        longitude: 77.5946
+        district: "Raichur",
+        city: "Raichur",
+        village: "Raichur Rural",
+        pincode: "584101",
+        latitude: 16.205,
+        longitude: 77.355
       };
 
+      let createdUser = null;
       if (isFallbackMode()) {
-        return createUser(userData);
-      }
-
-      try {
-        return await User.create(userData);
-      } catch (error) {
-        if (error.code !== 11000) {
-          throw error;
+        createdUser = createUser(userData);
+      } else {
+        try {
+          createdUser = await User.create(userData);
+        } catch (error) {
+          if (error.code !== 11000) {
+            throw error;
+          }
+          createdUser = await User.findOne({ email }).select("+password");
         }
-
-        return User.findOne({ email });
       }
+
+      if (createdUser) {
+        await ensureDemoFarm(createdUser._id || createdUser.id);
+      }
+
+      return createdUser;
     })().finally(() => {
       demoUserCreation = null;
     });
@@ -252,6 +309,10 @@ export const loginUser = async (req, res) => {
       user = await User.findOne({ email: normalizedEmail }).select("+password");
     }
 
+    if (!user && normalizedEmail === "demo@agrisaarthi.local") {
+      user = await getDemoUser();
+    }
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -259,13 +320,26 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    const isMatch = await bcrypt.compare(String(password), user.password);
+    let isMatch = await bcrypt.compare(String(password), user.password);
+
+    if (!isMatch && normalizedEmail === "demo@agrisaarthi.local" && password === "Password@123") {
+      isMatch = true;
+      const newHash = await bcrypt.hash("Password@123", 12);
+      if (!isFallbackMode()) {
+        await User.updateOne({ _id: user._id }, { password: newHash });
+      }
+      user.password = newHash;
+    }
 
     if (!isMatch) {
       return res.status(401).json({
         success: false,
         message: "Invalid email or password"
       });
+    }
+
+    if (normalizedEmail === "demo@agrisaarthi.local") {
+      await ensureDemoFarm(user._id || user.id);
     }
 
     const token = generateToken(user._id || user.id);

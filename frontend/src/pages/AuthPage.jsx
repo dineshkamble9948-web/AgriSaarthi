@@ -83,6 +83,32 @@ export default function AuthPage({ onAuth, initialMode = "login" }) {
     setError("");
   };
 
+  const handleQuickSignIn = async () => {
+    setError("");
+    setLoading(true);
+    setForm({
+      name: "Demo Farmer",
+      email: "demo@agrisaarthi.local",
+      password: "Password@123"
+    });
+
+    try {
+      const response = await api.post("/auth/login", {
+        email: "demo@agrisaarthi.local",
+        password: "Password@123"
+      });
+      const { token, user } = response.data;
+      onAuth(token, user);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+        "Unable to sign in with demo credentials. Please check connection."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -473,11 +499,18 @@ export default function AuthPage({ onAuth, initialMode = "login" }) {
 
             {/* Quick Demo Helper (In Login Mode) */}
             {!isRegister && (
-              <div className="auth-quick-credentials">
-                <span>💡 <strong>Test Farmer Account:</strong> demo@agrisaarthi.local</span>
-                <button type="button" className="auth-quick-btn" onClick={handleQuickFill}>
-                  Auto-Fill
-                </button>
+              <div className="auth-quick-credentials" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                <span style={{ fontSize: "11px" }}>
+                  💡 <strong>Test Farmer Account:</strong> demo@agrisaarthi.local / Password@123
+                </span>
+                <div style={{ display: "flex", gap: "6px" }}>
+                  <button type="button" className="auth-quick-btn" onClick={handleQuickFill} style={{ background: "#475569" }}>
+                    Fill
+                  </button>
+                  <button type="button" className="auth-quick-btn" onClick={handleQuickSignIn} disabled={loading}>
+                    Sign In 🚀
+                  </button>
+                </div>
               </div>
             )}
 
