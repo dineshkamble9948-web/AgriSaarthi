@@ -1,25 +1,50 @@
-const EARTH_RADIUS_METERS = 6_371_000;
+const WGS84_RADIUS_METERS = 6378137;
+const SQUARE_METERS_PER_ACRE = 4046.8564224;
+const SQUARE_METERS_PER_HECTARE = 10000;
 
+/**
+ * Calculates geodesic polygon area on the WGS-84 sphere (accurate to standard GIS/Turf.js)
+ * @param {Array<[number, number]>} points Array of [lat, lng] coordinates
+ * @returns {number} Area in square meters
+ */
 export function calculatePolygonAreaSquareMeters(points) {
   if (!Array.isArray(points) || points.length < 3) {
     return 0;
   }
 
-  const meanLatitude = points.reduce((sum, point) => sum + point[0], 0) / points.length;
-  const longitudeScale = Math.cos((meanLatitude * Math.PI) / 180);
-  const projectedPoints = points.map(([latitude, longitude]) => [
-    EARTH_RADIUS_METERS * ((longitude * Math.PI) / 180) * longitudeScale,
-    EARTH_RADIUS_METERS * ((latitude * Math.PI) / 180)
+  // Ensure ring closes
+  const ring = points.map(([lat, lng]) => [
+    (lat * Math.PI) / 180,
+    (lng * Math.PI) / 180
   ]);
-  let twiceArea = 0;
+  const n = ring.length;
+  let totalAngle = 0;
 
-  for (let index = 0; index < projectedPoints.length; index += 1) {
-    const [x1, y1] = projectedPoints[index];
-    const [x2, y2] = projectedPoints[(index + 1) % projectedPoints.length];
-    twiceArea += x1 * y2 - x2 * y1;
+  for (let i = 0; i < n; i++) {
+    const prev = ring[(i - 1 + n) % n];
+    const next = ring[(i + 1) % n];
+    totalAngle += (next[1] - prev[1]) * Math.sin(ring[i][0]);
   }
 
-  return Math.abs(twiceArea) / 2;
+  const areaSqMeters = Math.abs((totalAngle * WGS84_RADIUS_METERS * WGS84_RADIUS_METERS) / 2);
+  return Number.isFinite(areaSqMeters) ? areaSqMeters : 0;
+}
+
+/**
+ * Returns formatted land area in acres and hectares
+ */
+export function calculateLandArea(points) {
+  const sqMeters = calculatePolygonAreaSquareMeters(points);
+  const acres = sqMeters / SQUARE_METERS_PER_ACRE;
+  const hectares = sqMeters / SQUARE_METERS_PER_HECTARE;
+
+  return {
+    squareMeters: Math.round(sqMeters),
+    acres: +acres.toFixed(2),
+    hectares: +hectares.toFixed(2),
+    formattedAcres: `${acres.toFixed(2)} acres`,
+    formattedHectares: `${hectares.toFixed(2)} ha`
+  };
 }
 
 export function polygonPathToGeoJSON(points) {

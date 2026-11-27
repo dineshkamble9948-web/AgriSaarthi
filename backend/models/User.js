@@ -31,13 +31,31 @@ const userSchema = new mongoose.Schema(
       default: "farmer"
     },
 
-    state: {
+    phoneNumber: {
       type: String,
       trim: true,
       default: ""
     },
 
+    preferredLanguage: {
+      type: String,
+      enum: ["en", "kn"],
+      default: "en"
+    },
+
+    state: {
+      type: String,
+      trim: true,
+      default: "Karnataka"
+    },
+
     district: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
+    taluk: {
       type: String,
       trim: true,
       default: ""
@@ -61,6 +79,12 @@ const userSchema = new mongoose.Schema(
       default: ""
     },
 
+    farmLocation: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+
     latitude: {
       type: Number,
       min: -90,
@@ -73,6 +97,17 @@ const userSchema = new mongoose.Schema(
       min: -180,
       max: 180,
       default: null
+    },
+
+    totalLandArea: {
+      type: Number,
+      min: 0,
+      default: 0
+    },
+
+    farmingHistory: {
+      type: [Object],
+      default: []
     }
   },
   {

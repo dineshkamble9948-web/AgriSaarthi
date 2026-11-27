@@ -4,7 +4,9 @@ import User from "../models/User.js";
 import {
   createFarmEntry,
   createFarmPlotEntry,
+  deleteFarmPlotEntry,
   findFarmByIdAndOwner,
+  findFarmPlotById,
   getFarmByOwner,
   isFallbackMode,
   listFarmPlots,
@@ -120,6 +122,12 @@ function buildPlotPayload(body) {
     area,
     areaUnit,
     currentCrop: String(body.currentCrop || "").trim(),
+    soilType: String(body.soilType || "Medium Black").trim(),
+    previousCrops: Array.isArray(body.previousCrops)
+      ? body.previousCrops.map(String)
+      : (body.previousCrops ? [String(body.previousCrops).trim()] : []),
+    locationName: String(body.locationName || "").trim(),
+    farmingHistory: Array.isArray(body.farmingHistory) ? body.farmingHistory : [],
     irrigationType
   };
 }
@@ -305,6 +313,64 @@ export const updateFarmPlot = async (req, res) => {
     return res.json({ success: true, plot: updatedPlot });
   } catch (error) {
     return sendControllerError(res, error, "Could not update farm plot.");
+  }
+};
+
+export const getFarmPlotById = async (req, res) => {
+  try {
+    const farm = await findOwnedFarm(req.params.farmId, req.user._id);
+    if (!farm) {
+      return res.status(404).json({ success: false, message: "Farm not found." });
+    }
+
+    const plot = isFallbackMode()
+      ? listFarmPlots(req.params.farmId, req.user._id)
+        .find((item) => String(item._id) === String(req.params.plotId))
+      : await FarmPlot.findOne({
+        _id: req.params.plotId,
+        farm: req.params.farmId,
+        owner: req.user._id
+      });
+
+    if (!plot) {
+      return res.status(404).json({ success: false, message: "Plot not found or access denied." });
+    }
+
+    return res.status(200).json({ success: true, plot });
+  } catch (error) {
+    return sendControllerError(res, error, "Could not retrieve plot details.");
+  }
+};
+
+export const deleteFarmPlot = async (req, res) => {
+  try {
+    const farm = await findOwnedFarm(req.params.farmId, req.user._id);
+    if (!farm) {
+      return res.status(404).json({ success: false, message: "Farm not found." });
+    }
+
+    let deleted = false;
+    if (isFallbackMode()) {
+      deleted = deleteFarmPlotEntry(req.params.plotId, req.params.farmId, req.user._id);
+    } else {
+      const result = await FarmPlot.findOneAndDelete({
+        _id: req.params.plotId,
+        farm: req.params.farmId,
+        owner: req.user._id
+      });
+      deleted = Boolean(result);
+    }
+
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: "Plot not found or unauthorized to delete." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Plot deleted successfully."
+    });
+  } catch (error) {
+    return sendControllerError(res, error, "Could not delete farm plot.");
   }
 };
 

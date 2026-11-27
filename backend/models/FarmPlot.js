@@ -57,6 +57,23 @@ const farmPlotSchema = new mongoose.Schema(
       trim: true,
       default: ""
     },
+    soilType: {
+      type: String,
+      default: "Medium Black"
+    },
+    previousCrops: {
+      type: [String],
+      default: []
+    },
+    locationName: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+    farmingHistory: {
+      type: [Object],
+      default: []
+    },
     irrigationType: {
       type: String,
       enum: ["Drip", "Sprinkler", "Flood", "Rainfed", "Other", "Unknown"],

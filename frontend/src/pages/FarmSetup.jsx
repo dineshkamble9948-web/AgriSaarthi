@@ -1,10 +1,28 @@
-
-import { useMemo, useState } from "react";
-import { Sprout, MapPin, Ruler, Droplets, LocateFixed, Undo2, Trash2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Sprout,
+  MapPin,
+  Ruler,
+  Droplets,
+  LocateFixed,
+  Undo2,
+  Redo2,
+  Trash2,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Search,
+  Footprints,
+  Play,
+  Pause,
+  Check,
+  Maximize2
+} from "lucide-react";
 import api from "../services/api";
 import FarmLocationMap from "../components/FarmLocationMap";
 import {
   calculatePolygonAreaSquareMeters,
+  calculateLandArea,
   geoJSONToPolygonPath,
   polygonPathToGeoJSON
 } from "../utils/geospatial";
@@ -47,12 +65,33 @@ export default function FarmSetup({
   const [detectedAddress, setDetectedAddress] = useState("");
   const [error, setError] = useState("");
   const [locationError, setLocationError] = useState("");
+
+  // Search location
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+
+  // Boundary Drawing & Editing State
   const [boundaryPoints, setBoundaryPoints] = useState(
     () => geoJSONToPolygonPath(existingFarm?.boundary)
   );
+  const [undoStack, setUndoStack] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
   const [drawingBoundary, setDrawingBoundary] = useState(false);
-  const areaSquareMeters = useMemo(
-    () => calculatePolygonAreaSquareMeters(boundaryPoints),
+  const [drawingMethod, setDrawingMethod] = useState("click"); // "click", "satellite", "walk", "table"
+  const [mapType, setMapType] = useState("standard"); // "standard" or "satellite"
+
+  // GPS Walking Mode State
+  const [walkingActive, setWalkingActive] = useState(false);
+  const [walkingPaused, setWalkingPaused] = useState(false);
+  const [gpsAccuracy, setGpsAccuracy] = useState(null);
+  const [walkingWarning, setWalkingWarning] = useState("");
+  const watchIdRef = useRef(null);
+
+  // Manual Coordinate Editing string
+  const [manualCoordsText, setManualCoordsText] = useState("");
+
+  const landArea = useMemo(
+    () => calculateLandArea(boundaryPoints),
     [boundaryPoints]
   );
 
@@ -65,19 +104,90 @@ export default function FarmSetup({
     setLocationError("");
   };
 
-  const areaFromBoundary = (squareMeters, unit) => {
-    const divisor = unit === "hectares" ? SQUARE_METERS_PER_HECTARE : SQUARE_METERS_PER_ACRE;
-    return squareMeters > 0 ? (squareMeters / divisor).toFixed(2) : "";
+  const handleVertexMove = (index, [lat, lng]) => {
+    setBoundaryPoints((prev) => {
+      const next = [...prev];
+      next[index] = [Number(lat.toFixed(6)), Number(lng.toFixed(6))];
+      return next;
+    });
+  };
+
+  // Synchronize manual coords text when switching to table mode
+  useEffect(() => {
+    if (drawingMethod === "table") {
+      setManualCoordsText(boundaryPoints.map(([lat, lng]) => `${lat.toFixed(6)}, ${lng.toFixed(6)}`).join("\n"));
+    }
+  }, [drawingMethod, boundaryPoints]);
+
+  const applyManualCoords = () => {
+    const lines = manualCoordsText.split("\n").map(l => l.trim()).filter(Boolean);
+    const parsed = [];
+    for (const line of lines) {
+      const parts = line.split(/[,\s]+/).map(Number);
+      if (parts.length >= 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+        parsed.push([parts[0], parts[1]]);
+      }
+    }
+    if (parsed.length >= 3) {
+      setUndoStack((u) => [...u, boundaryPoints]);
+      setBoundaryPoints(parsed);
+      setError("");
+    } else {
+      setError("Enter at least 3 valid coordinate pairs (latitude, longitude) on separate lines.");
+    }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((current) => ({
       ...current,
-      [name]: name === "areaUnit" && areaSquareMeters >= 0.01
-        ? areaFromBoundary(areaSquareMeters, value)
-        : value
+      [name]: value
     }));
+  };
+
+  // Location search using OpenStreetMap Nominatim
+  const handleLocationSearch = async (e) => {
+    e?.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    setSearching(true);
+    setLocationError("");
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ", Karnataka, India")}&limit=1`
+      );
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const item = data[0];
+        const lat = parseFloat(item.lat);
+        const lon = parseFloat(item.lon);
+        updateCenter([lat, lon]);
+
+        // Reverse geocode to get administrative hierarchy
+        const geoRes = await api.get("/farms/reverse-geocode", {
+          params: { latitude: lat, longitude: lon }
+        });
+        const addr = geoRes.data;
+        setForm((prev) => ({
+          ...prev,
+          state: addr.state || prev.state,
+          district: addr.district || prev.district,
+          village: addr.village || prev.village,
+          city: addr.city || prev.city,
+          pincode: addr.pincode || prev.pincode,
+          location: addr.village || addr.city || searchQuery,
+          latitude: lat.toFixed(6),
+          longitude: lon.toFixed(6)
+        }));
+        setLocationSuccess(`Location found: ${item.display_name}`);
+      } else {
+        setLocationError(`Could not find "${searchQuery}". Please check the spelling or enter coordinates manually.`);
+      }
+    } catch (err) {
+      setLocationError("Location search network error. Enter coordinates or click on the map.");
+    } finally {
+      setSearching(false);
+    }
   };
 
   const detectCurrentLocation = () => {
@@ -119,7 +229,6 @@ export default function FarmSetup({
             [data.village, data.city, data.district, data.state, data.pincode].filter(Boolean).join(", ");
           setDetectedAddress(addressSummary);
 
-          // Automatically save location to user profile in MongoDB
           try {
             await api.post("/auth/location", {
               state: data.state || form.state,
@@ -136,7 +245,6 @@ export default function FarmSetup({
 
           setLocationSuccess("Your location has been detected and saved successfully!");
         } catch (apiErr) {
-          // If reverse geocoding request fails, still save coordinates
           setForm((prev) => ({
             ...prev,
             latitude: Number(lat).toFixed(6),
@@ -168,6 +276,8 @@ export default function FarmSetup({
 
   const handleMapClick = (position) => {
     if (drawingBoundary) {
+      setUndoStack((u) => [...u, boundaryPoints]);
+      setRedoStack([]);
       setBoundaryPoints((points) => [...points, position]);
       if (!form.latitude || !form.longitude) {
         updateCenter(position);
@@ -178,15 +288,99 @@ export default function FarmSetup({
     updateCenter(position);
   };
 
-  const handleCoordinateChange = (event) => {
-    const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
-    setLocationError("");
+  // Undo point
+  const handleUndoPoint = () => {
+    if (boundaryPoints.length === 0) return;
+    setRedoStack((r) => [...r, boundaryPoints]);
+    setBoundaryPoints((points) => points.slice(0, -1));
   };
+
+  // Redo point
+  const handleRedoPoint = () => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack((r) => r.slice(0, -1));
+    setUndoStack((u) => [...u, boundaryPoints]);
+    setBoundaryPoints(next);
+  };
+
+  // GPS Walking Mode Implementation
+  const startGpsWalking = () => {
+    if (!navigator.geolocation) {
+      setWalkingWarning("GPS walking mode is not supported on this device.");
+      return;
+    }
+
+    setWalkingActive(true);
+    setWalkingPaused(false);
+    setWalkingWarning("");
+    setDrawingBoundary(true);
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        setGpsAccuracy(accuracy);
+
+        if (accuracy > 15) {
+          setWalkingWarning(`GPS accuracy is low (±${Math.round(accuracy)}m). Walk slowly in open sky for optimal boundary mapping.`);
+        } else {
+          setWalkingWarning("");
+        }
+
+        if (!walkingPaused) {
+          const newPt = [Number(latitude.toFixed(6)), Number(longitude.toFixed(6))];
+          setBoundaryPoints((prev) => {
+            if (prev.length === 0) return [newPt];
+            const last = prev[prev.length - 1];
+            // Filter redundant points within ~2 meters
+            const latDiff = Math.abs(last[0] - newPt[0]);
+            const lonDiff = Math.abs(last[1] - newPt[1]);
+            if (latDiff > 0.00002 || lonDiff > 0.00002) {
+              return [...prev, newPt];
+            }
+            return prev;
+          });
+          if (!form.latitude || !form.longitude) {
+            updateCenter([latitude, longitude]);
+          }
+        }
+      },
+      (err) => {
+        setWalkingWarning(`GPS error: ${err.message}. Ensure location permissions are active.`);
+      },
+      { enableHighAccuracy: true, maximumAge: 1000 }
+    );
+  };
+
+  const pauseGpsWalking = () => {
+    setWalkingPaused(true);
+  };
+
+  const resumeGpsWalking = () => {
+    setWalkingPaused(false);
+  };
+
+  const finishGpsWalking = () => {
+    if (watchIdRef.current) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setWalkingActive(false);
+    setWalkingPaused(false);
+    finishBoundary();
+  };
+
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
 
   const finishBoundary = () => {
     if (boundaryPoints.length < 3) {
-      setError("Mark at least three points on the map to define a farm boundary.");
+      setError("Mark at least three points on the map to define an agricultural boundary.");
       return;
     }
 
@@ -194,16 +388,23 @@ export default function FarmSetup({
     setError("");
     setForm((current) => ({
       ...current,
-      area: areaFromBoundary(areaSquareMeters, current.areaUnit)
+      area: String(landArea.acres || "")
     }));
   };
 
   const clearBoundary = () => {
+    setUndoStack((u) => [...u, boundaryPoints]);
+    setRedoStack([]);
     setBoundaryPoints([]);
     setDrawingBoundary(false);
+    if (watchIdRef.current) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setWalkingActive(false);
     setForm((current) => ({
       ...current,
-      area: areaSquareMeters > 0 ? "" : current.area
+      area: ""
     }));
   };
 
@@ -230,7 +431,7 @@ export default function FarmSetup({
     try {
       const response = await api.post("/farms", {
         ...form,
-        area: Number(form.area),
+        area: Number(form.area || landArea.acres || 1),
         ph: form.ph === "" ? null : Number(form.ph),
         nitrogen: form.nitrogen === "" ? null : Number(form.nitrogen),
         phosphorus: form.phosphorus === "" ? null : Number(form.phosphorus),
@@ -243,7 +444,6 @@ export default function FarmSetup({
       });
 
       onFarmSaved(response.data.farm);
-
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -255,240 +455,89 @@ export default function FarmSetup({
   };
 
   return (
-    <div className={`farm-setup-page${embedded ? " farm-setup-page-embedded" : ""}`}>
-
-      <form className={`farm-setup-card${embedded ? " farm-setup-card-embedded" : ""}`} onSubmit={handleSubmit}>
-
-        <div className="farm-setup-logo">
-          <Sprout size={26} />
-          <strong>AgriSaarthi</strong>
+    <div className={`farm-setup-container ${embedded ? "embedded-setup" : ""}`}>
+      <div className="farm-setup-header">
+        <div className="farm-icon-circle">
+          <Sprout size={32} />
         </div>
+        <h2>{existingFarm ? "Update Farm Profile" : createNewFarm ? "Add Another Farm" : "Farmer Profile & Farm Setup"}</h2>
+        <p>Complete your farm details, set your agricultural location, and accurately map land boundaries.</p>
+      </div>
 
-        <span className="welcome-label">YOUR FARM PROFILE</span>
-
-        <h1>{existingFarm ? "Edit farm details" : createNewFarm ? "Add another farm" : "Let's set up your farm"}</h1>
-
-        <p className="farm-setup-description">
-          {existingFarm
-            ? "Update this farm's location, boundary, and profile."
-            : "Enter your farm information to receive personalized agricultural recommendations."}
-        </p>
-
-        {/* Automatic Location Detection Card */}
-        <div
-          style={{
-            margin: "20px 0 24px 0",
-            padding: "20px",
-            backgroundColor: "#f0fdf4",
-            border: "1px solid #bbf7d0",
-            borderRadius: "12px"
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-            <MapPin size={22} color="#15803d" />
-            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#166534" }}>
-              Agricultural Location Setup
-            </h3>
-          </div>
-          <p style={{ margin: "0 0 16px 0", fontSize: "13px", color: "#374151", lineHeight: "1.5" }}>
-            Click below to automatically detect your coordinates and populate your village, district, state, and pincode via GPS, or enter them manually.
-          </p>
-
-          <button
-            type="button"
-            onClick={detectCurrentLocation}
-            disabled={detectingLocation}
-            className="primary-button"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "10px",
-              width: "100%",
-              padding: "14px 20px",
-              fontSize: "15px",
-              fontWeight: "700",
-              letterSpacing: "0.5px",
-              borderRadius: "10px",
-              backgroundColor: "#15803d",
-              color: "#ffffff",
-              boxShadow: "0 4px 12px rgba(21, 128, 61, 0.25)",
-              cursor: detectingLocation ? "wait" : "pointer",
-              transition: "all 0.2s ease"
-            }}
-          >
-            {detectingLocation ? (
-              <>
-                <Loader2 size={20} className="animate-spin" />
-                <span>Detecting your location via GPS...</span>
-              </>
-            ) : (
-              <>
-                <MapPin size={20} />
-                <span>📍 USE MY CURRENT LOCATION</span>
-              </>
-            )}
-          </button>
-
-          {locationSuccess && (
-            <div
-              style={{
-                marginTop: "14px",
-                padding: "12px 16px",
-                backgroundColor: "#dcfce7",
-                border: "1px solid #86efac",
-                borderRadius: "8px",
-                color: "#166534",
-                fontSize: "14px",
-                fontWeight: "600",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
-              }}
-            >
-              <CheckCircle2 size={18} color="#15803d" />
-              <span>{locationSuccess}</span>
-            </div>
-          )}
-
-          {detectedAddress && (
-            <div
-              style={{
-                marginTop: "10px",
-                padding: "10px 14px",
-                backgroundColor: "#ffffff",
-                border: "1px dashed #86efac",
-                borderRadius: "8px",
-                fontSize: "13px",
-                color: "#166534"
-              }}
-            >
-              <strong>Detected Address:</strong> {detectedAddress}
-              <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "2px" }}>
-                You can review and edit any detected details manually below.
-              </div>
-            </div>
-          )}
-
-          {locationError && (
-            <div
-              style={{
-                marginTop: "14px",
-                padding: "12px 16px",
-                backgroundColor: "#fef2f2",
-                border: "1px solid #fecaca",
-                borderRadius: "8px",
-                color: "#b91c1c",
-                fontSize: "13px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
-              }}
-            >
-              <AlertCircle size={18} color="#dc2626" />
-              <span>{locationError}</span>
-            </div>
-          )}
-        </div>
-
+      <form className="farm-setup-form" onSubmit={handleSubmit}>
         <div className="farm-form-grid">
-
           <div className="farm-input-group">
-            <label>Farm Name *</label>
+            <label htmlFor="farmName">Farm / Holding Name *</label>
             <input
+              id="farmName"
               name="farmName"
               value={form.farmName}
               onChange={handleChange}
-              placeholder="e.g. Green Valley Farm"
+              placeholder="e.g. Raichur Cotton Farm"
               required
             />
           </div>
 
           <div className="farm-input-group">
-            <label>State *</label>
+            <label htmlFor="location">Village / Locality *</label>
             <input
+              id="location"
+              name="location"
+              value={form.location}
+              onChange={handleChange}
+              placeholder="e.g. Sirwar"
+              required
+            />
+          </div>
+
+          <div className="farm-input-group">
+            <label htmlFor="district">District</label>
+            <input
+              id="district"
+              name="district"
+              value={form.district}
+              onChange={handleChange}
+              placeholder="e.g. Raichur"
+            />
+          </div>
+
+          <div className="farm-input-group">
+            <label htmlFor="state">State</label>
+            <input
+              id="state"
               name="state"
               value={form.state}
               onChange={handleChange}
               placeholder="e.g. Karnataka"
+            />
+          </div>
+
+          <div className="farm-input-group">
+            <label htmlFor="area">Total Land Area *</label>
+            <input
+              id="area"
+              type="number"
+              step="0.01"
+              min="0.01"
+              name="area"
+              value={form.area}
+              onChange={handleChange}
+              placeholder="e.g. 5.5"
               required
             />
           </div>
 
           <div className="farm-input-group">
-            <label>District *</label>
-            <input
-              name="district"
-              value={form.district}
+            <label htmlFor="areaUnit">Area Unit</label>
+            <select
+              id="areaUnit"
+              name="areaUnit"
+              value={form.areaUnit}
               onChange={handleChange}
-              placeholder="e.g. Bengaluru Urban"
-              required
-            />
-          </div>
-
-          <div className="farm-input-group">
-            <label>Village / Locality</label>
-            <input
-              name="village"
-              value={form.village}
-              onChange={handleChange}
-              placeholder="e.g. Yelahanka or nearby village"
-            />
-          </div>
-
-          <div className="farm-input-group">
-            <label>City / Town</label>
-            <input
-              name="city"
-              value={form.city}
-              onChange={handleChange}
-              placeholder="e.g. Bengaluru"
-            />
-          </div>
-
-          <div className="farm-input-group">
-            <label>Pincode</label>
-            <input
-              name="pincode"
-              value={form.pincode}
-              onChange={handleChange}
-              placeholder="e.g. 560001"
-            />
-          </div>
-
-          <div className="farm-input-group">
-            <label>Location Label / General Address</label>
-            <input
-              name="location"
-              value={form.location}
-              onChange={handleChange}
-              placeholder="Enter your farm location or landmark"
-            />
-          </div>
-
-          <div className="farm-input-group">
-            <label>Farm Area *</label>
-            <div className="farm-area-input">
-              <Ruler size={17} />
-              <input
-                type="number"
-                name="area"
-                min="0.01"
-                step="any"
-                value={form.area}
-                onChange={handleChange}
-                placeholder="e.g. 5"
-                required
-              />
-              <select
-                name="areaUnit"
-                value={form.areaUnit}
-                onChange={handleChange}
-              >
-                <option value="acres">Acres</option>
-                <option value="hectares">Hectares</option>
-              </select>
-            </div>
+            >
+              <option value="acres">Acres</option>
+              <option value="hectares">Hectares</option>
+            </select>
           </div>
 
           <div className="farm-input-group">
@@ -529,55 +578,253 @@ export default function FarmSetup({
               ))}
             </select>
           </div>
-
         </div>
 
-        <section className="farm-location-section">
-          <div className="soil-section-heading">
-            <MapPin size={20} />
-            <div>
-              <strong>Farm Location &amp; Boundaries</strong>
-              <span>Optional. Use GPS, enter coordinates, or select your farm on the map.</span>
+        {/* Phase 1.2: Location Selection & Search Bar */}
+        <section className="farm-location-section" style={{ background: "#ffffff", padding: "18px", borderRadius: "10px", border: "1px solid #e2e8f0", marginTop: "16px" }}>
+          <div className="soil-section-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <MapPin size={22} color="#16a34a" />
+              <div>
+                <strong style={{ fontSize: "15px", color: "#166534" }}>Farm Location & Boundary Mapping</strong>
+                <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
+                  Select via GPS, village search, or map drawing. Geodesic area calculation in acres and hectares.
+                </p>
+              </div>
             </div>
+            <button
+              type="button"
+              className="farm-location-action"
+              onClick={detectCurrentLocation}
+              disabled={detectingLocation}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 14px",
+                background: "#f0fdf4",
+                color: "#166534",
+                border: "1px solid #bbf7d0",
+                borderRadius: "8px",
+                fontWeight: "600",
+                fontSize: "12px",
+                cursor: "pointer"
+              }}
+            >
+              {detectingLocation ? <Loader2 size={16} className="animate-spin" /> : <LocateFixed size={16} />}
+              {detectingLocation ? "Detecting GPS..." : "📍 Use My Current Location"}
+            </button>
           </div>
 
-          <button type="button" className="farm-location-action" onClick={detectCurrentLocation} disabled={detectingLocation}>
-            {detectingLocation ? <Loader2 size={16} className="animate-spin" /> : <LocateFixed size={16} />}
-            {detectingLocation ? "Detecting location..." : "Use my current location"}
-          </button>
-
-          <div className="farm-form-grid farm-coordinate-grid">
-            <div className="farm-input-group">
-              <label htmlFor="farm-latitude">Latitude</label>
+          {/* Village / Town Search Bar */}
+          <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+            <div style={{ position: "relative", flex: 1 }}>
               <input
-                id="farm-latitude"
-                type="number"
-                name="latitude"
-                min="-90"
-                max="90"
-                step="any"
-                value={form.latitude}
-                onChange={handleCoordinateChange}
-                placeholder="e.g. 12.9716"
+                type="text"
+                placeholder="Search village, town, or district in Karnataka..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLocationSearch(e)}
+                style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px" }}
               />
+              <Search size={16} color="#94a3b8" style={{ position: "absolute", left: 10, top: 10 }} />
             </div>
-            <div className="farm-input-group">
-              <label htmlFor="farm-longitude">Longitude</label>
-              <input
-                id="farm-longitude"
-                type="number"
-                name="longitude"
-                min="-180"
-                max="180"
-                step="any"
-                value={form.longitude}
-                onChange={handleCoordinateChange}
-                placeholder="e.g. 77.5946"
-              />
-            </div>
+            <button
+              type="button"
+              onClick={handleLocationSearch}
+              disabled={searching}
+              style={{ padding: "8px 14px", background: "#16a34a", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "600", fontSize: "12px", cursor: "pointer" }}
+            >
+              {searching ? "Searching..." : "Search"}
+            </button>
           </div>
-          {locationError && <p className="farm-location-message">{locationError}</p>}
 
+          {locationSuccess && (
+            <div style={{ fontSize: "12px", color: "#15803d", backgroundColor: "#f0fdf4", padding: "8px 12px", borderRadius: "6px", border: "1px solid #bbf7d0", marginBottom: "12px" }}>
+              ✓ {locationSuccess}
+            </div>
+          )}
+          {locationError && (
+            <div style={{ fontSize: "12px", color: "#b91c1c", backgroundColor: "#fef2f2", padding: "8px 12px", borderRadius: "6px", border: "1px solid #fecaca", marginBottom: "12px" }}>
+              ⚠ {locationError}
+            </div>
+          )}
+
+          {/* Phase 2.1: 4 Drawing Methods Selector */}
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "10px" }}>
+            <button
+              type="button"
+              onClick={() => {
+                setDrawingMethod("click");
+                setDrawingBoundary(true);
+                setMapType("standard");
+              }}
+              style={{
+                padding: "6px 12px",
+                fontSize: "12px",
+                fontWeight: "600",
+                borderRadius: "6px",
+                border: drawingMethod === "click" ? "2px solid #16a34a" : "1px solid #cbd5e1",
+                background: drawingMethod === "click" ? "#f0fdf4" : "#ffffff",
+                color: drawingMethod === "click" ? "#166534" : "#475569",
+                cursor: "pointer"
+              }}
+            >
+              ✏ 1. Manual Polygon Drawing
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDrawingMethod("satellite");
+                setDrawingBoundary(true);
+                setMapType("satellite");
+              }}
+              style={{
+                padding: "6px 12px",
+                fontSize: "12px",
+                fontWeight: "600",
+                borderRadius: "6px",
+                border: drawingMethod === "satellite" ? "2px solid #16a34a" : "1px solid #cbd5e1",
+                background: drawingMethod === "satellite" ? "#f0fdf4" : "#ffffff",
+                color: drawingMethod === "satellite" ? "#166534" : "#475569",
+                cursor: "pointer"
+              }}
+            >
+              🛰 2. Satellite Boundary Drawing
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDrawingMethod("walk");
+                setDrawingBoundary(true);
+              }}
+              style={{
+                padding: "6px 12px",
+                fontSize: "12px",
+                fontWeight: "600",
+                borderRadius: "6px",
+                border: drawingMethod === "walk" ? "2px solid #16a34a" : "1px solid #cbd5e1",
+                background: drawingMethod === "walk" ? "#f0fdf4" : "#ffffff",
+                color: drawingMethod === "walk" ? "#166534" : "#475569",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px"
+              }}
+            >
+              <Footprints size={14} />
+              3. GPS Walking Mode
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDrawingMethod("table");
+              }}
+              style={{
+                padding: "6px 12px",
+                fontSize: "12px",
+                fontWeight: "600",
+                borderRadius: "6px",
+                border: drawingMethod === "table" ? "2px solid #16a34a" : "1px solid #cbd5e1",
+                background: drawingMethod === "table" ? "#f0fdf4" : "#ffffff",
+                color: drawingMethod === "table" ? "#166534" : "#475569",
+                cursor: "pointer"
+              }}
+            >
+              📝 4. Coordinate Table Entry
+            </button>
+          </div>
+
+          {/* Phase 2.2: GPS Walking Mode Controller Banner */}
+          {drawingMethod === "walk" && (
+            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "12px", borderRadius: "8px", marginBottom: "12px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                <div>
+                  <strong style={{ fontSize: "13px", color: "#166534" }}>GPS Walking Mode Active</strong>
+                  <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#475569" }}>
+                    Walk along your farmland perimeter. The app logs your GPS points automatically.
+                  </p>
+                  {gpsAccuracy !== null && (
+                    <span style={{ fontSize: "11px", color: gpsAccuracy <= 15 ? "#15803d" : "#b45309", fontWeight: "600" }}>
+                      GPS Accuracy: ±{Math.round(gpsAccuracy)} meters ({gpsAccuracy <= 10 ? "High" : gpsAccuracy <= 20 ? "Moderate" : "Low"})
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", gap: "6px" }}>
+                  {!walkingActive ? (
+                    <button
+                      type="button"
+                      onClick={startGpsWalking}
+                      style={{ padding: "6px 12px", background: "#16a34a", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: "600", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                    >
+                      <Play size={13} /> Start Recording
+                    </button>
+                  ) : walkingPaused ? (
+                    <button
+                      type="button"
+                      onClick={resumeGpsWalking}
+                      style={{ padding: "6px 12px", background: "#16a34a", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: "600", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                    >
+                      <Play size={13} /> Resume
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={pauseGpsWalking}
+                      style={{ padding: "6px 12px", background: "#ca8a04", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: "600", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                    >
+                      <Pause size={13} /> Pause
+                    </button>
+                  )}
+
+                  {walkingActive && (
+                    <button
+                      type="button"
+                      onClick={finishGpsWalking}
+                      style={{ padding: "6px 12px", background: "#0f766e", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}
+                    >
+                      Finish & Close
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {walkingWarning && (
+                <div style={{ marginTop: "8px", fontSize: "11px", color: "#b45309" }}>
+                  ⚠ {walkingWarning}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Phase 2.1: Coordinate Table Entry Drawer */}
+          {drawingMethod === "table" && (
+            <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "12px" }}>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#334155", marginBottom: "4px" }}>
+                Boundary Coordinates (one pair per line: latitude, longitude)
+              </label>
+              <textarea
+                rows={5}
+                value={manualCoordsText}
+                onChange={(e) => setManualCoordsText(e.target.value)}
+                placeholder="16.205120, 77.354120&#10;16.206250, 77.355320&#10;16.204890, 77.356100"
+                style={{ width: "100%", padding: "8px", fontFamily: "monospace", fontSize: "12px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+              />
+              <button
+                type="button"
+                onClick={applyManualCoords}
+                style={{ marginTop: "6px", padding: "6px 12px", background: "#16a34a", color: "#fff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}
+              >
+                Apply Coordinates to Map
+              </button>
+            </div>
+          )}
+
+          {/* Map Container */}
           <FarmLocationMap
             center={form.latitude !== "" && form.longitude !== ""
               ? [Number(form.latitude), Number(form.longitude)]
@@ -585,72 +832,87 @@ export default function FarmSetup({
             boundaryPath={boundaryPoints}
             onCenterChange={updateCenter}
             onMapClick={handleMapClick}
+            onVertexMove={handleVertexMove}
+            mapType={mapType}
+            onMapTypeToggle={setMapType}
+            drawingMode={drawingBoundary}
           />
 
-          <div className="farm-boundary-actions">
-            {!drawingBoundary ? (
+          {/* Point Manipulation Actions: Undo, Redo, Delete Last, Clear, Finish */}
+          <div className="farm-boundary-actions" style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "10px", alignItems: "center" }}>
+            {drawingBoundary ? (
               <button
                 type="button"
                 className="farm-location-action"
-                onClick={() => {
-                  setBoundaryPoints([]);
-                  setDrawingBoundary(true);
-                  setError("");
-                }}
+                onClick={finishBoundary}
+                style={{ background: "#166534", color: "#ffffff", border: "none", padding: "7px 14px", borderRadius: "6px", fontWeight: "600", fontSize: "12px", cursor: "pointer" }}
               >
-                <MapPin size={16} />
-                {boundaryPoints.length >= 3 ? "Redraw boundary" : "Draw farm boundary"}
+                ✓ Automatically Close & Finish Boundary
               </button>
             ) : (
-              <>
-                <button type="button" className="farm-location-action" onClick={finishBoundary}>
-                  <MapPin size={16} />
-                  Finish boundary
-                </button>
-                <button
-                  type="button"
-                  className="farm-location-action farm-location-action-secondary"
-                  onClick={() => setBoundaryPoints((points) => points.slice(0, -1))}
-                  disabled={boundaryPoints.length === 0}
-                >
-                  <Undo2 size={16} />
-                  Undo point
-                </button>
-              </>
-            )}
-            {boundaryPoints.length > 0 && (
-              <button type="button" className="farm-location-action farm-location-action-secondary" onClick={clearBoundary}>
-                <Trash2 size={16} />
-                Clear boundary
+              <button
+                type="button"
+                className="farm-location-action"
+                onClick={() => setDrawingBoundary(true)}
+                style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", padding: "7px 14px", borderRadius: "6px", fontWeight: "600", fontSize: "12px", cursor: "pointer" }}
+              >
+                ✏ {boundaryPoints.length >= 3 ? "Edit / Redraw Boundary" : "Draw Boundary Points"}
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={handleUndoPoint}
+              disabled={boundaryPoints.length === 0}
+              style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "7px 12px", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "12px", cursor: boundaryPoints.length > 0 ? "pointer" : "not-allowed" }}
+            >
+              <Undo2 size={14} /> Undo Point
+            </button>
+
+            <button
+              type="button"
+              onClick={handleRedoPoint}
+              disabled={redoStack.length === 0}
+              style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "7px 12px", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "12px", cursor: redoStack.length > 0 ? "pointer" : "not-allowed" }}
+            >
+              <Redo2 size={14} /> Redo Point
+            </button>
+
+            {boundaryPoints.length > 0 && (
+              <button
+                type="button"
+                onClick={clearBoundary}
+                style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "7px 12px", background: "#fef2f2", color: "#b91c1c", border: "1px solid #fecaca", borderRadius: "6px", fontSize: "12px", cursor: "pointer" }}
+              >
+                <Trash2 size={14} /> Clear Boundary
+              </button>
+            )}
+
+            {/* Calculated Area Display */}
+            {landArea.acres > 0 && (
+              <div style={{ marginLeft: "auto", background: "#ecfdf5", border: "1px solid #a7f3d0", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", color: "#065f46", fontWeight: "700" }}>
+                📐 Calculated Area: {landArea.formattedAcres} ({landArea.formattedHectares})
+              </div>
+            )}
           </div>
-          {drawingBoundary && (
-            <p className="farm-map-hint">Click the map to add boundary points. Add at least three points, then finish.</p>
-          )}
-          {areaSquareMeters > 0 && (
-            <p className="farm-area-estimate">
-              Approximate mapped area: {(areaSquareMeters / SQUARE_METERS_PER_ACRE).toFixed(2)} acres
-              {" "}({(areaSquareMeters / SQUARE_METERS_PER_HECTARE).toFixed(2)} hectares)
-            </p>
-          )}
         </section>
 
-        <div className="soil-section">
+        {/* Soil Test Information Section */}
+        <div className="soil-section" style={{ marginTop: "16px" }}>
           <div className="soil-section-heading">
             <Droplets size={20} />
             <div>
               <strong>Soil Test Information</strong>
-              <span>Optional – you can enter this later.</span>
+              <span>Optional – you can enter lab test values or use Karnataka benchmarks.</span>
             </div>
           </div>
 
           <div className="soil-input-grid">
             {[
               ["ph", "Soil pH"],
-              ["nitrogen", "Nitrogen (N)"],
-              ["phosphorus", "Phosphorus (P)"],
-              ["potassium", "Potassium (K)"]
+              ["nitrogen", "Nitrogen (N) kg/ha"],
+              ["phosphorus", "Phosphorus (P) kg/ha"],
+              ["potassium", "Potassium (K) kg/ha"]
             ].map(([name, label]) => (
               <div className="farm-input-group" key={name}>
                 <label>{label}</label>
@@ -671,7 +933,7 @@ export default function FarmSetup({
 
         {error && <div className="auth-error">{error}</div>}
 
-        <div className="farm-setup-actions">
+        <div className="farm-setup-actions" style={{ marginTop: "20px" }}>
           {onCancel && (
             <button type="button" className="secondary-button" onClick={onCancel} disabled={loading}>
               Cancel
@@ -686,9 +948,7 @@ export default function FarmSetup({
             <MapPin size={18} />
           </button>
         </div>
-
       </form>
-
     </div>
   );
 }

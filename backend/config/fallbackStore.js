@@ -65,11 +65,38 @@ export const updateUserLocation = (userId, locationData) => {
   if (user) {
     if (locationData.state !== undefined) user.state = String(locationData.state || "").trim();
     if (locationData.district !== undefined) user.district = String(locationData.district || "").trim();
+    if (locationData.taluk !== undefined) user.taluk = String(locationData.taluk || "").trim();
     if (locationData.village !== undefined) user.village = String(locationData.village || "").trim();
     if (locationData.city !== undefined) user.city = String(locationData.city || "").trim();
     if (locationData.pincode !== undefined) user.pincode = String(locationData.pincode || "").trim();
+    if (locationData.farmLocation !== undefined) user.farmLocation = String(locationData.farmLocation || "").trim();
     if (locationData.latitude !== undefined) user.latitude = locationData.latitude == null ? null : Number(locationData.latitude);
     if (locationData.longitude !== undefined) user.longitude = locationData.longitude == null ? null : Number(locationData.longitude);
+    user.updatedAt = new Date().toISOString();
+  }
+
+  return user || null;
+};
+
+export const updateUserProfile = (userId, profileData) => {
+  const target = normalizeId(userId);
+  const user = fallbackStore.users.find((u) => normalizeId(u.id || u._id) === target);
+
+  if (user) {
+    if (profileData.name !== undefined) user.name = String(profileData.name || "").trim();
+    if (profileData.phoneNumber !== undefined) user.phoneNumber = String(profileData.phoneNumber || "").trim();
+    if (profileData.preferredLanguage !== undefined) user.preferredLanguage = String(profileData.preferredLanguage || "en").trim();
+    if (profileData.state !== undefined) user.state = String(profileData.state || "").trim();
+    if (profileData.district !== undefined) user.district = String(profileData.district || "").trim();
+    if (profileData.taluk !== undefined) user.taluk = String(profileData.taluk || "").trim();
+    if (profileData.village !== undefined) user.village = String(profileData.village || "").trim();
+    if (profileData.city !== undefined) user.city = String(profileData.city || "").trim();
+    if (profileData.pincode !== undefined) user.pincode = String(profileData.pincode || "").trim();
+    if (profileData.farmLocation !== undefined) user.farmLocation = String(profileData.farmLocation || "").trim();
+    if (profileData.latitude !== undefined) user.latitude = profileData.latitude == null ? null : Number(profileData.latitude);
+    if (profileData.longitude !== undefined) user.longitude = profileData.longitude == null ? null : Number(profileData.longitude);
+    if (profileData.totalLandArea !== undefined) user.totalLandArea = profileData.totalLandArea == null ? 0 : Number(profileData.totalLandArea);
+    if (Array.isArray(profileData.farmingHistory)) user.farmingHistory = profileData.farmingHistory;
     user.updatedAt = new Date().toISOString();
   }
 
@@ -196,6 +223,30 @@ export const updateFarmPlotEntry = (plotId, farmId, ownerId, payload) => {
 
   Object.assign(plot, payload, { updatedAt: new Date().toISOString() });
   return plot;
+};
+
+export const findFarmPlotById = (plotId, ownerId) => {
+  const targetPlot = normalizeId(plotId);
+  const targetOwner = normalizeId(ownerId);
+  return fallbackStore.farmPlots.find((item) => (
+    normalizeId(item._id) === targetPlot
+    && (targetOwner == null || normalizeId(item.owner) === targetOwner)
+  )) || null;
+};
+
+export const deleteFarmPlotEntry = (plotId, farmId, ownerId) => {
+  const targetPlot = normalizeId(plotId);
+  const targetFarm = normalizeId(farmId);
+  const targetOwner = normalizeId(ownerId);
+  const initialCount = fallbackStore.farmPlots.length;
+
+  fallbackStore.farmPlots = fallbackStore.farmPlots.filter((item) => !(
+    normalizeId(item._id) === targetPlot
+    && normalizeId(item.farm) === targetFarm
+    && normalizeId(item.owner) === targetOwner
+  ));
+
+  return fallbackStore.farmPlots.length < initialCount;
 };
 
 export const listCropCyclesByFarm = (farmId, ownerId) => {

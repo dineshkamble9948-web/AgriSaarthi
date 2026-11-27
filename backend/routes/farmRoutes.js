@@ -4,6 +4,8 @@ import express from "express";
 import {
   createFarmPlot,
   getFarmPlots,
+  getFarmPlotById,
+  deleteFarmPlot,
   getMyFarms,
   saveFarm,
   getMyFarm,
@@ -38,7 +40,9 @@ router.get("/", getMyFarms);
 router.post("/", saveFarm);
 router.get("/:farmId/plots", getFarmPlots);
 router.post("/:farmId/plots", createFarmPlot);
+router.get("/:farmId/plots/:plotId", getFarmPlotById);
 router.patch("/:farmId/plots/:plotId", updateFarmPlot);
+router.delete("/:farmId/plots/:plotId", deleteFarmPlot);
 router.get("/:farmId/crops", getCropCycles);
 router.post("/:farmId/crops", createCropCycle);
 router.patch("/:farmId/crops/:cycleId", updateCropCycle);

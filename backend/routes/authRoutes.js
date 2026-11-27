@@ -7,6 +7,7 @@ import {
   demoLogin,
   getMe,
   updateLocation,
+  updateProfile,
   reverseGeocodeEndpoint
 } from "../controllers/authController.js";
 
@@ -23,6 +24,8 @@ router.post("/demo-login", demoLogin);
 router.get("/me", protect, getMe);
 
 router.post("/location", protect, updateLocation);
+router.put("/profile", protect, updateProfile);
+router.patch("/profile", protect, updateProfile);
 
 router.get("/reverse-geocode", reverseGeocodeEndpoint);
 

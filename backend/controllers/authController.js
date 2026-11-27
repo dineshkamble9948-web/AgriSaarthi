@@ -9,6 +9,7 @@ import {
   findUserById,
   isFallbackMode,
   updateUserLocation,
+  updateUserProfile,
   getFarmByOwner
 } from "../config/fallbackStore.js";
 import { reverseGeocode } from "../services/reverseGeocodeService.js";
@@ -306,13 +307,19 @@ export const getMe = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role || "farmer",
+        phoneNumber: user.phoneNumber || "",
+        preferredLanguage: user.preferredLanguage || "en",
         state: user.state || "",
         district: user.district || "",
+        taluk: user.taluk || "",
         village: user.village || "",
         city: user.city || "",
         pincode: user.pincode || "",
+        farmLocation: user.farmLocation || "",
         latitude: user.latitude ?? null,
-        longitude: user.longitude ?? null
+        longitude: user.longitude ?? null,
+        totalLandArea: user.totalLandArea ?? 0,
+        farmingHistory: user.farmingHistory || []
       }
     });
   } catch (error) {
@@ -325,7 +332,7 @@ export const getMe = async (req, res) => {
 
 export const updateLocation = async (req, res) => {
   try {
-    const { state, district, village, city, pincode, latitude, longitude } = req.body;
+    const { state, district, taluk, village, city, pincode, farmLocation, latitude, longitude } = req.body;
 
     const lat = latitude !== "" && latitude != null ? Number(latitude) : null;
     const lon = longitude !== "" && longitude != null ? Number(longitude) : null;
@@ -343,9 +350,11 @@ export const updateLocation = async (req, res) => {
     const locationPayload = {
       state: String(state || "").trim(),
       district: String(district || "").trim(),
+      taluk: String(taluk || "").trim(),
       village: String(village || "").trim(),
       city: String(city || "").trim(),
       pincode: String(pincode || "").trim(),
+      farmLocation: String(farmLocation || "").trim(),
       latitude: lat,
       longitude: lon
     };
@@ -357,7 +366,7 @@ export const updateLocation = async (req, res) => {
       if (farm) {
         Object.assign(farm, {
           ...locationPayload,
-          location: locationPayload.village || locationPayload.city || farm.location
+          location: locationPayload.farmLocation || locationPayload.village || locationPayload.city || farm.location
         });
       }
     } else {
@@ -371,8 +380,8 @@ export const updateLocation = async (req, res) => {
         { owner: req.user._id },
         {
           ...locationPayload,
-          ...(locationPayload.village || locationPayload.city
-            ? { location: locationPayload.village || locationPayload.city }
+          ...(locationPayload.farmLocation || locationPayload.village || locationPayload.city
+            ? { location: locationPayload.farmLocation || locationPayload.village || locationPayload.city }
             : {})
         }
       );
@@ -394,6 +403,93 @@ export const updateLocation = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Could not save location details."
+    });
+  }
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+    const {
+      name,
+      phoneNumber,
+      preferredLanguage,
+      state,
+      district,
+      taluk,
+      village,
+      city,
+      pincode,
+      farmLocation,
+      latitude,
+      longitude,
+      totalLandArea,
+      farmingHistory
+    } = req.body;
+
+    const lat = latitude !== "" && latitude != null ? Number(latitude) : null;
+    const lon = longitude !== "" && longitude != null ? Number(longitude) : null;
+    const landArea = totalLandArea !== "" && totalLandArea != null ? Math.max(0, Number(totalLandArea)) : 0;
+
+    const profilePayload = {
+      ...(name ? { name: String(name).trim() } : {}),
+      ...(phoneNumber !== undefined ? { phoneNumber: String(phoneNumber).trim() } : {}),
+      ...(preferredLanguage ? { preferredLanguage: ["en", "kn"].includes(preferredLanguage) ? preferredLanguage : "en" } : {}),
+      ...(state !== undefined ? { state: String(state).trim() } : {}),
+      ...(district !== undefined ? { district: String(district).trim() } : {}),
+      ...(taluk !== undefined ? { taluk: String(taluk).trim() } : {}),
+      ...(village !== undefined ? { village: String(village).trim() } : {}),
+      ...(city !== undefined ? { city: String(city).trim() } : {}),
+      ...(pincode !== undefined ? { pincode: String(pincode).trim() } : {}),
+      ...(farmLocation !== undefined ? { farmLocation: String(farmLocation).trim() } : {}),
+      ...(lat !== null ? { latitude: lat } : {}),
+      ...(lon !== null ? { longitude: lon } : {}),
+      ...(landArea !== undefined ? { totalLandArea: landArea } : {}),
+      ...(Array.isArray(farmingHistory) ? { farmingHistory } : {})
+    };
+
+    let updatedUser;
+    if (isFallbackMode()) {
+      updatedUser = updateUserProfile(req.user._id, profilePayload);
+    } else {
+      updatedUser = await User.findByIdAndUpdate(
+        req.user._id,
+        profilePayload,
+        { new: true, runValidators: true }
+      );
+    }
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: "User profile not found." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Farmer profile updated successfully!",
+      user: {
+        id: updatedUser._id || updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role || "farmer",
+        phoneNumber: updatedUser.phoneNumber || "",
+        preferredLanguage: updatedUser.preferredLanguage || "en",
+        state: updatedUser.state || "",
+        district: updatedUser.district || "",
+        taluk: updatedUser.taluk || "",
+        village: updatedUser.village || "",
+        city: updatedUser.city || "",
+        pincode: updatedUser.pincode || "",
+        farmLocation: updatedUser.farmLocation || "",
+        latitude: updatedUser.latitude ?? null,
+        longitude: updatedUser.longitude ?? null,
+        totalLandArea: updatedUser.totalLandArea ?? 0,
+        farmingHistory: updatedUser.farmingHistory || []
+      }
+    });
+  } catch (error) {
+    console.error("Profile update error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Could not update farmer profile."
     });
   }
 };
