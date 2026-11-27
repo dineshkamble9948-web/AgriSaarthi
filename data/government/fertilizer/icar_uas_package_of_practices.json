@@ -1,0 +1,103 @@
+{
+  "provenance": {
+    "organization": "University of Agricultural Sciences, Raichur (UAS Raichur) & ICAR",
+    "document": "Package of Practices for High Yielding Crops of North-Eastern Dry Zone of Karnataka",
+    "publication_year": "2024-2025",
+    "official_url": "https://uasraichur.edu.in/index.php/en/extension/package-of-practices",
+    "licensing": "Public Agricultural Extension & Farmer Advisory Material"
+  },
+  "crops": {
+    "cotton": {
+      "crop_name": "Bt Cotton / Hybrid Cotton",
+      "recommended_dose_npk_kg_ha": { "n": 150, "p": 75, "k": 75 },
+      "recommended_dose_npk_kg_acre": { "n": 60, "p": 30, "k": 30 },
+      "commercial_fertilizers_per_acre": [
+        { "product": "DAP (18-46-0)", "quantity_kg": 65, "bags_50kg": 1.3, "timing": "100% basal at sowing" },
+        { "product": "Urea (46-0-0)", "quantity_kg": 105, "bags_50kg": 2.1, "timing": "Split into 3 equal doses: 30, 60, and 90 DAS" },
+        { "product": "MOP (0-0-60)", "quantity_kg": 50, "bags_50kg": 1.0, "timing": "50% basal + 50% at flowering (60 DAS)" },
+        { "product": "Zinc Sulphate (21% Zn)", "quantity_kg": 10, "bags_50kg": 0.2, "timing": "Basal application once in 2 years" }
+      ],
+      "split_schedule": [
+        { "stage": "Basal (At Sowing)", "details": "Full P (DAP) + 50% K (MOP) + 10 kg Zinc Sulphate + 25 kg Urea" },
+        { "stage": "Vegetative / Squaring (30-35 DAS)", "details": "Top dressing: 40 kg Urea per acre + intercultivation" },
+        { "stage": "Peak Flowering (60-65 DAS)", "details": "Top dressing: 40 kg Urea + remaining 25 kg MOP + foliar spray 1% 19:19:19" },
+        { "stage": "Boll Formation (85-90 DAS)", "details": "Foliar spray of 1% Magnesium Sulphate + 1% Potassium Nitrate (13:0:45) to prevent leaf reddening" }
+      ],
+      "organic_supplements": [
+        "Well decomposed Farmyard Manure (FYM): 4-5 tonnes/acre before final ploughing",
+        "Neem cake @ 100 kg/acre to manage soil pests and slow-release nitrogen"
+      ],
+      "precautions": [
+        "Never apply Urea on dry soil; always follow with light irrigation or apply under soil moisture.",
+        "Do not mix Zinc Sulphate directly with phosphatic fertilizers (DAP/SSP) to avoid insoluble zinc phosphate precipitate."
+      ]
+    },
+    "paddy": {
+      "crop_name": "Paddy (Rice - Transformed / DSR)",
+      "recommended_dose_npk_kg_ha": { "n": 100, "p": 50, "k": 50 },
+      "recommended_dose_npk_kg_acre": { "n": 40, "p": 20, "k": 20 },
+      "commercial_fertilizers_per_acre": [
+        { "product": "DAP (18-46-0)", "quantity_kg": 45, "bags_50kg": 0.9, "timing": "100% basal during last puddling" },
+        { "product": "Urea (46-0-0)", "quantity_kg": 70, "bags_50kg": 1.4, "timing": "Split into 3 equal doses: basal, tillering, and panicle initiation" },
+        { "product": "MOP (0-0-60)", "quantity_kg": 35, "bags_50kg": 0.7, "timing": "50% basal + 50% at panicle initiation" },
+        { "product": "Zinc Sulphate (21% Zn)", "quantity_kg": 10, "bags_50kg": 0.2, "timing": "Basal broadcast during puddling" }
+      ],
+      "split_schedule": [
+        { "stage": "Basal (Last Puddling)", "details": "100% P (DAP) + 50% K (MOP) + 25% N (Urea) + 10 kg Zinc Sulphate" },
+        { "stage": "Active Tillering (20-25 DAT)", "details": "Top dress 50% N (35 kg Urea) after draining standing water" },
+        { "stage": "Panicle Initiation (45-50 DAT)", "details": "Top dress remaining 25% N (18 kg Urea) + remaining 50% K (18 kg MOP)" }
+      ],
+      "organic_supplements": [
+        "Dhaincha / Sunnhemp green manure incorporation @ 20-25 kg seed/acre 45 days before puddling",
+        "Azospirillum & PSB biofertilizers @ 2 kg/acre mixed with 100 kg FYM"
+      ],
+      "precautions": [
+        "Maintain thin film of water (2-3 cm) during vegetative stage; do not submerge completely.",
+        "Stop nitrogen top dressing 40 days before expected harvest."
+      ]
+    },
+    "maize": {
+      "crop_name": "Hybrid Maize (Kharif / Rabi)",
+      "recommended_dose_npk_kg_ha": { "n": 150, "p": 65, "k": 65 },
+      "recommended_dose_npk_kg_acre": { "n": 60, "p": 26, "k": 26 },
+      "commercial_fertilizers_per_acre": [
+        { "product": "DAP (18-46-0)", "quantity_kg": 55, "bags_50kg": 1.1, "timing": "100% basal at sowing" },
+        { "product": "Urea (46-0-0)", "quantity_kg": 110, "bags_50kg": 2.2, "timing": "Split: 20% basal, 40% knee-high, 40% tasseling" },
+        { "product": "MOP (0-0-60)", "quantity_kg": 45, "bags_50kg": 0.9, "timing": "50% basal + 50% at knee-high stage" },
+        { "product": "Zinc Sulphate", "quantity_kg": 10, "bags_50kg": 0.2, "timing": "Basal band placement" }
+      ],
+      "split_schedule": [
+        { "stage": "Basal (At Sowing)", "details": "Full DAP + 50% MOP + 20 kg Urea + 10 kg Zinc Sulphate" },
+        { "stage": "Knee-High Stage (25-30 DAS)", "details": "Side dressing: 45 kg Urea + 22 kg MOP, followed by earthing up" },
+        { "stage": "Tasseling / Pre-Flowering (45-50 DAS)", "details": "Top dressing: 45 kg Urea under optimum soil moisture" }
+      ],
+      "organic_supplements": [
+        "FYM @ 3-4 tonnes/acre",
+        "Azotobacter seed treatment @ 250 g/10 kg seed"
+      ],
+      "precautions": [
+        "Maize is highly sensitive to waterlogging at germination and knee-high stages; provide field drainage."
+      ]
+    },
+    "chickpea": {
+      "crop_name": "Chickpea (Bengal Gram)",
+      "recommended_dose_npk_kg_ha": { "n": 25, "p": 50, "k": 0 },
+      "recommended_dose_npk_kg_acre": { "n": 10, "p": 20, "k": 0 },
+      "commercial_fertilizers_per_acre": [
+        { "product": "DAP (18-46-0)", "quantity_kg": 45, "bags_50kg": 0.9, "timing": "100% basal drill placement at sowing" },
+        { "product": "Sulphur (Bentonite 90%)", "quantity_kg": 8, "bags_50kg": 0.16, "timing": "Basal application to enhance protein synthesis" }
+      ],
+      "split_schedule": [
+        { "stage": "Basal (At Sowing)", "details": "100% P & N (DAP @ 45 kg/acre) placed 5 cm below seed depth" },
+        { "stage": "Pod Development (60 DAS)", "details": "Foliar spray of 2% Urea or 1% 19:19:19 to prevent premature senescing" }
+      ],
+      "organic_supplements": [
+        "Rhizobium leguminosarum seed inoculation @ 250 g/10 kg seed + PSB (Phosphorus Solubilizing Bacteria)"
+      ],
+      "precautions": [
+        "Do not apply excessive chemical nitrogen; legumes fix atmospheric nitrogen symbiotically.",
+        "Avoid irrigation at peak flowering to prevent flower abortion."
+      ]
+    }
+  }
+}

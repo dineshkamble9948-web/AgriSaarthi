@@ -35,7 +35,9 @@ export const listSchemes = async (req, res) => {
       count: schemes.length,
       total: schemes.length,
       schemes,
-      data: schemes
+      data: schemes,
+      disclaimer: "Official scheme guidelines and disbursement timelines are administered by respective state and central departments. Farmers must verify eligibility through their local Raitha Samparka Kendra (RSK) or Common Service Center (CSC).",
+      provenance: "Official Government of India (myScheme) & Government of Karnataka (agri.karnataka.gov.in) agricultural portals."
     });
   } catch (error) {
     console.error("Schemes lookup error:", error);

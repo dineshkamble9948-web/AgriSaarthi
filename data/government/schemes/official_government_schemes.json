@@ -1,0 +1,193 @@
+{
+  "source_directory": "Government of India (myScheme.gov.in) & Government of Karnataka (agri.karnataka.gov.in)",
+  "compiled_by": "AgriSaarthi Government Data Integration Unit",
+  "verification_date": "2026-11-20",
+  "disclaimer": "Scheme guidelines, subsidy percentages, and application windows are determined by respective State and Central Government departments. Farmers must verify active tenders and notifications with their local Raitha Samparka Kendra (RSK) or Common Service Center (CSC). AgriSaarthi does not guarantee financial disbursements.",
+  "schemes": [
+    {
+      "id": "pm-kisan",
+      "name": "Pradhan Mantri Kisan Samman Nidhi (PM-KISAN)",
+      "kannadaName": "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕಿಸಾನ್ ಸಮ್ಮಾನ್ ನಿಧಿ",
+      "level": "Central",
+      "state": "All India",
+      "category": "Financial Support",
+      "benefitAmount": "₹6,000 per year (in 3 equal four-monthly installments of ₹2,000 each)",
+      "description": "Direct Income Support transferred into Aadhaar-linked bank accounts to support agricultural inputs, seeds, and fertilizer expenses.",
+      "eligibility": [
+        "Small, marginal, and landholding farmer families with cultivable land in their names",
+        "Must have active Aadhaar e-KYC and land records seeded on PM-KISAN portal",
+        "Institutional landholders, current/former constitutional post holders, and income taxpayers are excluded"
+      ],
+      "documents": [
+        "Aadhaar Card",
+        "Record of Rights, Tenancy and Crops (RTC / Pahani)",
+        "Bank Account Passbook (Aadhaar Seeded / NPCI active)",
+        "Active Mobile Number for OTP Verification"
+      ],
+      "procedure": "Register online at pmkisan.gov.in (Farmer Corner) or visit the nearest Common Service Centre (CSC) / Grama One centre.",
+      "officialWebsite": "https://pmkisan.gov.in/",
+      "lastVerifiedDate": "2026-11-20"
+    },
+    {
+      "id": "raitha-siri",
+      "name": "Karnataka Raitha Siri Scheme",
+      "kannadaName": "ಕರ್ನಾಟಕ ರೈತ ಸಿರಿ ಯೋಜನೆ",
+      "level": "Karnataka State",
+      "state": "Karnataka",
+      "category": "Crop Incentive",
+      "benefitAmount": "₹10,000 per hectare (up to a maximum of 2.0 hectares / ₹20,000)",
+      "description": "Karnataka State Government financial incentive for dryland farmers cultivating nutri-cereals / minor millets (Ragi, Foxtail, Little, Kodo, Barnyard, Proso millets).",
+      "eligibility": [
+        "Farmers in Karnataka cultivating notified minor millets",
+        "Must be registered in the Karnataka FRUITS (Farmer Registration and Unified Beneficiary Information System) database with active FID",
+        "Crop cultivation must be verified through the Digital Crop Survey (Bele Jarip)"
+      ],
+      "documents": [
+        "FRUITS FID Number (Farmer Identification Number)",
+        "RTC (Pahani) showing millet crop entry",
+        "Aadhaar Card",
+        "Aadhaar-linked Bank Account"
+      ],
+      "procedure": "Ensure enrollment in the FRUITS database at the local Raitha Samparka Kendra (RSK) and verify your digital crop survey entry during Kharif season.",
+      "officialWebsite": "https://fruits.karnataka.gov.in/",
+      "lastVerifiedDate": "2026-11-20"
+    },
+    {
+      "id": "krishi-bhagya",
+      "name": "Krishi Bhagya Scheme (Karnataka)",
+      "kannadaName": "ಕೃಷಿ ಭಾಗ್ಯ ಯೋಜನೆ",
+      "level": "Karnataka State",
+      "state": "Karnataka",
+      "category": "Water & Irrigation",
+      "benefitAmount": "Up to 80% - 90% subsidy for construction of Farm Ponds (Krishi Honda), polythene lining, diesel pumpsets, and micro-irrigation",
+      "description": "Water harvesting and dryland farming initiative focusing on rainfall-dependent districts of Karnataka to harvest rainwater in farm ponds and provide life-saving protective irrigation.",
+      "eligibility": [
+        "Dryland and rainfed farmers in Karnataka, with priority for drought-prone taluks",
+        "Small & Marginal farmers get 90% subsidy; general farmers get 80% subsidy",
+        "Must have clear title to agricultural land suitable for farm pond excavation"
+      ],
+      "documents": [
+        "RTC / Pahani",
+        "Aadhaar Card",
+        "Bank Passbook",
+        "Caste Certificate (for SC/ST higher subsidy entitlement)",
+        "FRUITS FID"
+      ],
+      "procedure": "Submit application to the Assistant Director of Agriculture (ADA) or local Raitha Samparka Kendra (RSK).",
+      "officialWebsite": "https://raitamitra.karnataka.gov.in/",
+      "lastVerifiedDate": "2026-11-20"
+    },
+    {
+      "id": "pmfby",
+      "name": "Pradhan Mantri Fasal Bima Yojana (PMFBY)",
+      "kannadaName": "ಪ್ರಧಾನ ಮಂತ್ರಿ ಫಸಲ್ ಬಿಮಾ ಯೋಜನೆ",
+      "level": "Central & State Joint",
+      "state": "All India",
+      "category": "Insurance & Safety",
+      "benefitAmount": "Comprehensive crop loss insurance with very low farmer premium (2% for Kharif crops, 1.5% for Rabi, 5% for Annual Commercial/Horticultural crops)",
+      "description": "Yield-index and weather-index crop insurance protecting farmers against non-preventable natural risks (drought, flood, unseasonal rain, pests, and post-harvest cyclone damage).",
+      "eligibility": [
+        "All farmers including loanee, non-loanee, tenant, and sharecroppers cultivating notified crops in notified insurance units",
+        "Timely enrollment before the seasonal cutoff deadline announced by Karnataka Department of Agriculture"
+      ],
+      "documents": [
+        "Pahani / RTC",
+        "Aadhaar Card",
+        "Sowing Certificate issued by Village Administrative Officer / RSK or Digital Crop Survey",
+        "Bank Account Details"
+      ],
+      "procedure": "Apply through the Samrakshane Karnataka Portal (samrakshane.karnataka.gov.in) or visit your bank branch / Common Service Center.",
+      "officialWebsite": "https://pmfby.gov.in/",
+      "lastVerifiedDate": "2026-11-20"
+    },
+    {
+      "id": "soil-health-card",
+      "name": "Soil Health Card Scheme",
+      "kannadaName": "ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಕಾರ್ಡ್ ಯೋಜನೆ",
+      "level": "Central",
+      "state": "All India",
+      "category": "Financial Support",
+      "benefitAmount": "100% Free Soil Testing and Customized Fertilizer Prescription Card issued every 2 years",
+      "description": "Government initiative that tests farm soil samples across 12 chemical and micronutrient parameters (N, P, K, S, Zn, Fe, Cu, Mn, Bo, pH, EC, OC) to advise balanced fertilizer application.",
+      "eligibility": [
+        "All landholding farmers across Karnataka and India",
+        "Soil samples collected by department agricultural officers or accredited village youth"
+      ],
+      "documents": [
+        "Land Record (RTC) survey number",
+        "Farmer contact and location details"
+      ],
+      "procedure": "Contact your local Raitha Samparka Kendra (RSK) or submit a soil sample to the nearest district Soil Testing Laboratory (STL).",
+      "officialWebsite": "https://soilhealth.dac.gov.in/",
+      "lastVerifiedDate": "2026-11-20"
+    },
+    {
+      "id": "pmksy",
+      "name": "Pradhan Mantri Krishi Sinchayee Yojana - Per Drop More Crop",
+      "kannadaName": "ಪ್ರಧಾನ ಮಂತ್ರಿ ಕೃಷಿ ಸಿಂಚಾಯಿ ಯೋಜನೆ (ಹನಿ ನೀರಾವರಿ)",
+      "level": "Central & State Joint",
+      "state": "All India",
+      "category": "Water & Irrigation",
+      "benefitAmount": "Up to 90% subsidy for SC/ST farmers and up to 45% - 55% subsidy for Small/Marginal farmers for installing Drip and Sprinkler irrigation systems",
+      "description": "Water efficiency program promoting micro-irrigation technologies (drip and sprinkler) to maximize water use efficiency, save water, and boost crop productivity.",
+      "eligibility": [
+        "All categories of farmers with available water source (borewell, open well, canal, or farm pond)",
+        "Priority given to water-stressed taluks and horticultural crops"
+      ],
+      "documents": [
+        "RTC (Pahani)",
+        "Aadhaar Card",
+        "Water and Electricity availability certificate",
+        "Borewell test report or water source proof",
+        "FRUITS FID"
+      ],
+      "procedure": "Apply online through the Karnataka Horticulture Department portal or through the Assistant Director of Horticulture / RSK.",
+      "officialWebsite": "https://pmksy.gov.in/",
+      "lastVerifiedDate": "2026-11-20"
+    },
+    {
+      "id": "krishi-yantradhare",
+      "name": "Krishi Yantradhare (Custom Hiring Centers - CHC)",
+      "kannadaName": "ಕೃಷಿ ಯಂತ್ರಧಾರೆ ಯೋಜನೆ",
+      "level": "Karnataka State",
+      "state": "Karnataka",
+      "category": "Equipment & Machinery",
+      "benefitAmount": "Heavy farm machinery, tractors, harvesters, rotavators, and weeders made available on hourly rental basis at 30% - 50% below commercial market rates",
+      "description": "Farm mechanization initiative established at hobli-level Custom Hiring Service Centers to provide small and marginal farmers access to high-cost modern farm machinery without capital investment.",
+      "eligibility": [
+        "All small, marginal, and medium farmers in Karnataka",
+        "First-come first-served booking during critical cultivation periods"
+      ],
+      "documents": [
+        "Aadhaar Card or FRUITS FID Number",
+        "Mobile Number for Booking SMS"
+      ],
+      "procedure": "Book machinery at your nearest Hobli Custom Hiring Center (CHC) or inquire at the local Raitha Samparka Kendra.",
+      "officialWebsite": "https://raitamitra.karnataka.gov.in/",
+      "lastVerifiedDate": "2026-11-20"
+    },
+    {
+      "id": "kcc",
+      "name": "Kisan Credit Card (KCC)",
+      "kannadaName": "ಕಿಸಾನ್ ಕ್ರೆಡಿಟ್ ಕಾರ್ಡ್ (KCC)",
+      "level": "Central",
+      "state": "All India",
+      "category": "Credit & Loans",
+      "benefitAmount": "Short-term agricultural production credit up to ₹3,00,000 at concessional interest rate of 4% per annum (with prompt repayment incentive)",
+      "description": "Institutional credit card designed to provide farmers with timely credit for purchase of seeds, fertilizers, pesticides, and post-harvest working capital, insulating them from high-interest unorganized lenders.",
+      "eligibility": [
+        "All farmers: individuals, joint borrowers, tenant farmers, oral lessees, and sharecroppers",
+        "Self Help Groups (SHGs) or Joint Liability Groups (JLGs) of farmers"
+      ],
+      "documents": [
+        "Duly filled application form",
+        "Identity Proof (Aadhaar, Voter ID)",
+        "Land ownership documents (RTC / Pahani)",
+        "Cropping pattern declaration"
+      ],
+      "procedure": "Visit your local commercial bank, RRB (Karnataka Gramin Bank), or Primary Agricultural Credit Society (PACS).",
+      "officialWebsite": "https://www.myscheme.gov.in/schemes/kcc",
+      "lastVerifiedDate": "2026-11-20"
+    }
+  ]
+}

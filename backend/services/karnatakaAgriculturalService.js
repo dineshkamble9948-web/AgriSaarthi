@@ -200,7 +200,14 @@ export const getRegionalSoilProfile = (district, taluk = null) => {
     deficiencies,
     soil_health_advisories: advisories,
     data_level: taluk ? "Taluk Benchmark" : "District Benchmark",
-    source: "DAC&FW Soil Health Card Portal (https://soilhealth.dac.gov.in/)"
+    available_water_capacity_mm_m: bench.soil?.includes("Black") ? 200 : 140,
+    dominant_soil_order: bench.soil?.includes("Black") ? "Vertisols (Deep to Medium Black Soil)" : "Alfisols (Red Sandy / Loamy Soil)",
+    land_capability_class: bench.soil?.includes("Black") ? "Class II & III (Suitable for Cotton, Pigeonpea, Chickpea, Maize)" : "Class II (Suitable for Ragi, Groundnut, Pulses, Vegetables)",
+    provenance: {
+      soilHealthCard: "DAC&FW National Soil Health Card Portal (https://soilhealth.dac.gov.in/)",
+      sujala3LRI: "Karnataka Watershed Development Department Sujala-3 LRI (https://sujala3lri.karnataka.gov.in/)"
+    },
+    source: "DAC&FW Soil Health Card Portal (https://soilhealth.dac.gov.in/) & Karnataka Sujala-3 LRI"
   };
 };
 

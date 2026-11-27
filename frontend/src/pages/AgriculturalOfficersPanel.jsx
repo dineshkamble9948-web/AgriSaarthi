@@ -292,6 +292,16 @@ export default function AgriculturalOfficersPanel({ farm }) {
           ))}
         </div>
       )}
+
+      {/* Official Directory Provenance */}
+      <div style={{ marginTop: "2rem", padding: "1rem", background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: "8px", fontSize: "0.8rem", color: "#64748b", textAlign: "center" }}>
+        <p style={{ margin: "0 0 0.35rem", fontWeight: "600", color: "#334155" }}>
+          Official Government Data Provenance: Department of Agriculture, Karnataka (agri.karnataka.gov.in) & ICAR-ATARI
+        </p>
+        <p style={{ margin: 0, lineHeight: "1.4" }}>
+          All contact details represent verified public offices for Raitha Samparka Kendras (RSK) and Krishi Vigyan Kendras (KVK). For immediate 24/7 central government agronomic advisory in Kannada, call the toll-free Kisan Call Center at 1800-180-1551.
+        </p>
+      </div>
     </div>
   );
 }

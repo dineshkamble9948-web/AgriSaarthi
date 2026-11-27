@@ -279,6 +279,16 @@ export default function GovernmentSchemesPanel({ farm }) {
           })}
         </div>
       )}
+
+      {/* Government Provenance and Eligibility Disclaimer */}
+      <div style={{ marginTop: "2rem", padding: "1rem", background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: "8px", fontSize: "0.8rem", color: "#64748b", textAlign: "center" }}>
+        <p style={{ margin: "0 0 0.35rem", fontWeight: "600", color: "#334155" }}>
+          Official Government Data Provenance: myScheme.gov.in & Karnataka Department of Agriculture (agri.karnataka.gov.in)
+        </p>
+        <p style={{ margin: 0, lineHeight: "1.4" }}>
+          Important Notice: AgriSaarthi provides informative discovery of official schemes based on farmer declarations. Eligibility criteria, application verification, and fund disbursements are strictly administered by respective Government of India and Government of Karnataka departments. We never guarantee financial grant approvals.
+        </p>
+      </div>
     </div>
   );
 }

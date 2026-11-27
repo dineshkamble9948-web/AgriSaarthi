@@ -154,7 +154,12 @@ export const getWeather = async (req, res) => {
     return res.status(200).json({
       success: true,
       weather,
-      crossSignals
+      crossSignals,
+      provenance: {
+        liveProvider: "Open-Meteo & OpenWeather Live Meteorological APIs",
+        climatologicalBenchmark: "India Meteorological Department (IMD) 30-Year Rainfall Normals",
+        lastObservedAt: weather.fetchedAt || new Date().toISOString()
+      }
     });
   } catch (error) {
     if (error instanceof WeatherProviderError) {

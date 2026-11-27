@@ -1,0 +1,92 @@
+{
+  "provenance": {
+    "source": "ICAR - Indian Institute of Water Management (IIWM) & FAO Irrigation and Drainage Paper No. 56",
+    "document": "Crop Evapotranspiration: Guidelines for Computing Crop Water Requirements (FAO-56) & ICAR Irrigation Agronomy Standards",
+    "applicable_region": "Deccan Plateau & Karnataka Agro-Climatic Zones",
+    "last_reviewed": "2026-11-20"
+  },
+  "methodology": {
+    "formula": "ETc = ETo * Kc",
+    "explanation": "Crop Evapotranspiration (ETc in mm/day) equals Reference Evapotranspiration (ETo from Penman-Monteith / meteorological radiation & temperature) multiplied by the crop-specific growth coefficient (Kc).",
+    "net_irrigation_requirement": "NIR = ETc - Pe (Effective Rainfall in mm)"
+  },
+  "crop_coefficients": {
+    "cotton": {
+      "crop": "Cotton",
+      "total_water_requirement_mm": "650 - 800",
+      "stages": [
+        { "stage": "Initial (Sowing to Emergence)", "duration_days": 25, "kc": 0.45, "water_need": "Low", "critical": false },
+        { "stage": "Crop Development (Square Formation)", "duration_days": 40, "kc": 0.75, "water_need": "Moderate", "critical": false },
+        { "stage": "Mid-Season (Flowering & Boll Setting)", "duration_days": 55, "kc": 1.15, "water_need": "Peak", "critical": true },
+        { "stage": "Late Season (Boll Opening & Maturity)", "duration_days": 45, "kc": 0.65, "water_need": "Low", "critical": false }
+      ],
+      "critical_growth_stages": [
+        "Square initiation (40-45 DAS)",
+        "Peak flowering (65-75 DAS)",
+        "Boll development (85-105 DAS)"
+      ],
+      "irrigation_guidance": "In Vertisols (Black soil), irrigate in alternate furrows to save 30% water without reducing seed-cotton yield. Withhold irrigation when 30-40% bolls have opened."
+    },
+    "paddy": {
+      "crop": "Paddy (Rice)",
+      "total_water_requirement_mm": "1100 - 1350",
+      "stages": [
+        { "stage": "Initial (Nursery & Puddling to Transplanting)", "duration_days": 25, "kc": 1.10, "water_need": "High", "critical": true },
+        { "stage": "Active Tillering", "duration_days": 35, "kc": 1.15, "water_need": "High", "critical": false },
+        { "stage": "Panicle Initiation & Flowering", "duration_days": 40, "kc": 1.30, "water_need": "Peak", "critical": true },
+        { "stage": "Grain Filling & Ripening", "duration_days": 30, "kc": 0.95, "water_need": "Moderate", "critical": false }
+      ],
+      "critical_growth_stages": [
+        "Transplanting establishment (1-7 DAT)",
+        "Panicle initiation (40-45 DAT)",
+        "Flowering and heading (65-75 DAT)"
+      ],
+      "irrigation_guidance": "Adopt Alternate Wetting and Drying (AWD) using a field water tube (pani pipe) after tillering. Re-irrigate to 5 cm depth when water level drops 15 cm below soil surface. Drain water completely 10-12 days before harvesting."
+    },
+    "maize": {
+      "crop": "Maize",
+      "total_water_requirement_mm": "500 - 650",
+      "stages": [
+        { "stage": "Initial (Germination to 5-leaf)", "duration_days": 20, "kc": 0.40, "water_need": "Low", "critical": false },
+        { "stage": "Vegetative (Knee-high to Tasseling)", "duration_days": 35, "kc": 0.80, "water_need": "Moderate", "critical": false },
+        { "stage": "Mid-Season (Tasseling, Silking & Cob Filling)", "duration_days": 40, "kc": 1.20, "water_need": "Peak", "critical": true },
+        { "stage": "Late Season (Dough to Physiological Maturity)", "duration_days": 25, "kc": 0.60, "water_need": "Low", "critical": false }
+      ],
+      "critical_growth_stages": [
+        "Tasseling stage (45-50 DAS)",
+        "Silking stage (55-60 DAS)",
+        "Cob grain milk stage (70-75 DAS)"
+      ],
+      "irrigation_guidance": "Ensure adequate moisture at tasseling and silking; water stress during pollination causes incomplete grain set and poor tip fill."
+    },
+    "chickpea": {
+      "crop": "Chickpea",
+      "total_water_requirement_mm": "250 - 350",
+      "stages": [
+        { "stage": "Initial (Sowing & Emergence)", "duration_days": 20, "kc": 0.40, "water_need": "Low", "critical": false },
+        { "stage": "Vegetative Branching", "duration_days": 25, "kc": 0.65, "water_need": "Low", "critical": false },
+        { "stage": "Pod Initiation & Filling", "duration_days": 35, "kc": 1.00, "water_need": "Moderate", "critical": true },
+        { "stage": "Maturity", "duration_days": 20, "kc": 0.35, "water_need": "Very Low", "critical": false }
+      ],
+      "critical_growth_stages": [
+        "Pre-flowering branching (30-35 DAS)",
+        "Pod development (60-65 DAS)"
+      ],
+      "irrigation_guidance": "In residual moisture black soils, one life-saving irrigation at pod development stage increases yield by 35%. Avoid flood irrigation during active flowering to prevent vegetative flushes and flower drop."
+    }
+  },
+  "soil_moisture_management": {
+    "Vertisol_Black_Soil": {
+      "field_capacity_percent": 38,
+      "wilting_point_percent": 18,
+      "available_water_percent": 20,
+      "irrigation_trigger": "Irrigate when 50% available water is depleted (around 28% volumetric soil moisture)."
+    },
+    "Alfisol_Red_Soil": {
+      "field_capacity_percent": 22,
+      "wilting_point_percent": 8,
+      "available_water_percent": 14,
+      "irrigation_trigger": "Irrigate when 50% available water is depleted (around 15% volumetric soil moisture). Higher frequency, lower volume required."
+    }
+  }
+}

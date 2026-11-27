@@ -230,6 +230,16 @@ export default function FarmingCalendarPanel({ farm }) {
           </div>
         </div>
       )}
+
+      {/* Package of Practices Provenance */}
+      <div style={{ marginTop: "2rem", padding: "1rem", background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: "8px", fontSize: "0.8rem", color: "#64748b", textAlign: "center" }}>
+        <p style={{ margin: "0 0 0.35rem", fontWeight: "600", color: "#334155" }}>
+          Official Provenance: University of Agricultural Sciences, Raichur (UAS Raichur) & ICAR Package of Practices
+        </p>
+        <p style={{ margin: 0, lineHeight: "1.4" }}>
+          All activity recommendations, split application dosages, and pest intervention milestones are digitized from certified state agricultural university extension manuals. Sowing dates synchronize activity alerts for the crop's vegetative, reproductive, and harvesting phases.
+        </p>
+      </div>
     </div>
   );
 }

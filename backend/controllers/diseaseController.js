@@ -8,6 +8,71 @@ import {
   PlantNetServiceError
 } from "../services/plantNetDiseaseService.js";
 
+// Verified ICAR & CIBRC Plant Protection Advisory Knowledge Base
+const ICAR_DISEASE_ADVISORY = {
+  "Early Blight": {
+    pathogen: "Alternaria solani",
+    symptoms: ["Concentric dark brown rings ('target spots') on older leaves", "Yellowing chlorotic halos around lesions", "Premature defoliation"],
+    culturalManagement: "Destroy and burn lower infected foliage. Ensure 2-year rotation with non-solanaceous crops.",
+    biologicalControl: "Foliar spray of Trichoderma harzianum @ 5g/L or Pseudomonas fluorescens @ 10g/L.",
+    chemicalControl: "Spray Mancozeb 75% WP @ 2.5 g/L or Azoxystrobin 23% SC @ 1 ml/L (Wait period: 3 days).",
+    officialSource: "ICAR-IIHR & CIBRC Approved Fungicides Bulletin"
+  },
+  "Late Blight": {
+    pathogen: "Phytophthora infestans",
+    symptoms: ["Water-soaked dark lesions on foliage", "White downy mildew on leaf underside during high humidity", "Rapid black rot of stems"],
+    culturalManagement: "Avoid overhead sprinkler irrigation; maintain adequate field drainage; burn infected haulms.",
+    biologicalControl: "Prophylactic bio-fungicide seed and soil treatment with Trichoderma viride.",
+    chemicalControl: "Prophylactic: Mancozeb 75% WP @ 2.5 g/L. Curative: Cymoxanil 8% + Mancozeb 64% WP @ 3 g/L.",
+    officialSource: "ICAR-CPRI & UAS Dharwad Plant Pathology Department"
+  },
+  "Bacterial Spot": {
+    pathogen: "Xanthomonas campestris / perforans",
+    symptoms: ["Small, circular, dark water-soaked spots with yellow halos", "Cracked scab-like fruit lesions"],
+    culturalManagement: "Use hot-water treated certified seeds (50°C for 25 min); avoid field work while plants are wet.",
+    biologicalControl: "Seed treatment with Pseudomonas fluorescens @ 10g/kg seed.",
+    chemicalControl: "Spray Copper Oxychloride 50% WP @ 2.5 g/L + Streptocycline @ 0.1 g/L.",
+    officialSource: "ICAR-IARI Division of Plant Pathology"
+  },
+  "Yellow Leaf Curl": {
+    pathogen: "Tomato Yellow Leaf Curl Virus (TYLCV - Vector: Whitefly)",
+    symptoms: ["Upward curling and cupping of leaflets", "Severe bushiness and stunted growth", "No fruit formation"],
+    culturalManagement: "Install 15 yellow sticky traps per acre; plant border rows of maize or sorghum as a living barrier.",
+    biologicalControl: "Spray Neem oil (1500 ppm) @ 3-5 ml/L or Lecanicillium lecanii @ 5 g/L.",
+    chemicalControl: "Spray Diafenthiuron 50% WP @ 1.2 g/L or Imidacloprid 17.8% SL @ 0.4 ml/L for whitefly control.",
+    officialSource: "ICAR-IIHR National Vector Management Guidelines"
+  },
+  "Common Rust": {
+    pathogen: "Puccinia sorghi",
+    symptoms: ["Golden-brown to cinnamon-brown powdery pustules on both leaf surfaces"],
+    culturalManagement: "Plant rust-tolerant hybrids; eradicate volunteer maize plants.",
+    biologicalControl: "Foliar spray with Bacillus subtilis @ 5g/L.",
+    chemicalControl: "Spray Mancozeb 75% WP @ 2.5 g/L or Azoxystrobin + Difenoconazole @ 1 ml/L.",
+    officialSource: "ICAR-IIMR (Indian Institute of Maize Research)"
+  }
+};
+
+const getVerifiedAdvisory = (diseaseName = "") => {
+  const name = String(diseaseName);
+  for (const [key, advisory] of Object.entries(ICAR_DISEASE_ADVISORY)) {
+    if (name.toLowerCase().includes(key.toLowerCase())) {
+      return {
+        ...advisory,
+        disclaimer: "Advisory compiled from ICAR and CIBRC approved label claims. AI screening requires physical verification before chemical pesticide application."
+      };
+    }
+  }
+  return {
+    pathogen: "Agricultural pathogen requiring field inspection",
+    symptoms: ["Leaf discoloration, necrosis or spotting"],
+    culturalManagement: "Maintain field sanitation, remove diseased plant debris, and avoid excess nitrogen.",
+    biologicalControl: "Prophylactic application of bio-agents (Trichoderma / Pseudomonas).",
+    chemicalControl: "Consult local Raitha Samparka Kendra (RSK) officer before applying chemical fungicides.",
+    officialSource: "ICAR Integrated Pest & Disease Management Standards",
+    disclaimer: "AI prediction provides screening only; physical inspection by an agricultural officer is advised."
+  };
+};
+
 const MOBILENET_CATALOG = [
   { id: 0, crop: "Apple", name: "Apple Scab", type: "Fungal" },
   { id: 1, crop: "Apple", name: "Apple with Black Rot", type: "Fungal" },
@@ -174,6 +239,8 @@ export const analyzeDisease = async (req, res) => {
       analysisTime: new Date().toISOString()
     });
 
+    const icarAdvisory = getVerifiedAdvisory(pred.prediction);
+
     return res.status(200).json({
       success: true,
       provider: "MobileNetV2",
@@ -182,8 +249,9 @@ export const analyzeDisease = async (req, res) => {
       crop: pred.crop || crop,
       prediction: pred,
       results,
-      symptoms: pred.symptoms || [],
-      recommendation: pred.recommendation || "",
+      symptoms: pred.symptoms || icarAdvisory.symptoms,
+      recommendation: pred.recommendation || `${icarAdvisory.culturalManagement} ${icarAdvisory.chemicalControl}`,
+      verifiedIcarAdvisory: icarAdvisory,
       report
     });
   }

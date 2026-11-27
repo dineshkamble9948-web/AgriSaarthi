@@ -533,6 +533,60 @@ export default function SoilIntelligence({ farm = null }) {
                 </article>
               ))}
             </div>
+            {recommendation.verifiedPackageOfPractices && (
+              <div style={{ marginTop: "1.25rem", padding: "1.25rem", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "10px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                  <div>
+                    <h4 style={{ margin: "0 0 0.25rem", color: "#14532d", fontSize: "1.05rem" }}>
+                      Verified Agronomic Package of Practices (POP) Dosage
+                    </h4>
+                    <span style={{ fontSize: "0.78rem", color: "#166534", fontWeight: "600" }}>
+                      Official Guidelines: {recommendation.verifiedPackageOfPractices.source}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: "0.75rem", background: "#dcfce7", color: "#15803d", padding: "0.2rem 0.6rem", borderRadius: "12px", fontWeight: "700" }}>
+                    OFFICIAL EXTENSION DATA
+                  </span>
+                </div>
+
+                {recommendation.verifiedPackageOfPractices.commercialProducts?.length > 0 && (
+                  <div style={{ marginBottom: "1rem" }}>
+                    <strong style={{ fontSize: "0.85rem", color: "#166534", display: "block", marginBottom: "0.4rem" }}>
+                      Commercial Fertilizer Requirements ({recommendation.verifiedPackageOfPractices.acreage} {recommendation.verifiedPackageOfPractices.acreageUnit || "acres"}):
+                    </strong>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem" }}>
+                      {recommendation.verifiedPackageOfPractices.commercialProducts.map((prod, idx) => (
+                        <div key={idx} style={{ background: "#ffffff", padding: "0.75rem", borderRadius: "8px", border: "1px solid #bbf7d0" }}>
+                          <span style={{ fontSize: "0.8rem", color: "#64748b", display: "block" }}>{prod.product}</span>
+                          <strong style={{ fontSize: "1.05rem", color: "#15803d", display: "block" }}>{prod.totalKgForLandArea} kg</strong>
+                          <small style={{ fontSize: "0.75rem", color: "#0369a1" }}>≈ {prod.bags50kg} bags (50kg)</small>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {recommendation.verifiedPackageOfPractices.splitSchedule?.length > 0 && (
+                  <div style={{ marginBottom: "0.75rem" }}>
+                    <strong style={{ fontSize: "0.85rem", color: "#166534", display: "block", marginBottom: "0.3rem" }}>
+                      Recommended Split Application Timings:
+                    </strong>
+                    <ul style={{ margin: 0, paddingLeft: "1.2rem", fontSize: "0.82rem", color: "#334155" }}>
+                      {recommendation.verifiedPackageOfPractices.splitSchedule.map((s, idx) => (
+                        <li key={idx} style={{ marginBottom: "0.25rem" }}>
+                          <strong>{s.stage}:</strong> {s.nitrogenSplit} | {s.phosphorusSplit} | {s.potassiumSplit}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <p style={{ margin: "0.5rem 0 0", fontSize: "0.75rem", color: "#64748b", borderTop: "1px dashed #cbd5e1", paddingTop: "0.5rem" }}>
+                  Note: Verified dosage applies to standard medium-fertility soils. For saline or highly alkaline soils, consult your local Raitha Samparka Kendra (RSK).
+                </p>
+              </div>
+            )}
+
             {recommendation.soilImprovements?.length > 0 && (
               <div className="soil-improvements">
                 <strong>Soil improvement suggestions</strong>

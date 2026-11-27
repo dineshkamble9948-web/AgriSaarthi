@@ -1,0 +1,98 @@
+{
+  "provenance": {
+    "source": "ICAR - National Institute of Plant Biotechnology & Directorate of Plant Protection, Quarantine and Storage (DPPQS) / CIBRC",
+    "partner_universities": "UAS Bengaluru, UAS Dharwad & UAS Raichur Plant Pathology Departments",
+    "document": "Integrated Pest and Disease Management (IPDM) Package of Practices & Registered Fungicides Catalog",
+    "last_reviewed": "2026-11-20"
+  },
+  "diseases": {
+    "Tomato with Early Blight": {
+      "pathogen": "Alternaria solani (Fungus)",
+      "crop": "Tomato / Solanaceae",
+      "symptoms": "Concentric dark brown rings ('target board' spots) on older leaves starting from base, leaf yellowing, stem lesions and fruit rot.",
+      "cultural_management": "Remove and burn lower infected leaves; stake plants to improve aeration; maintain 2-year crop rotation with non-solanaceous crops.",
+      "biological_control": "Foliar spray of Trichoderma harzianum @ 5g/L or Pseudomonas fluorescens @ 10g/L at early onset.",
+      "chemical_control": "Spray Mancozeb 75% WP @ 2.5 g/L or Chlorothalonil 75% WP @ 2 g/L; in severe cases, Azoxystrobin 23% SC @ 1 ml/L (Wait period: 3 days).",
+      "official_source": "ICAR-IIHR Bangalore IPM Bulletin & CIBRC Approved Label Claims"
+    },
+    "Tomato with Late Blight": {
+      "pathogen": "Phytophthora infestans (Oomycete)",
+      "crop": "Tomato & Potato",
+      "symptoms": "Water-soaked irregular pale green lesions on leaves turning purplish-brown rapidly, white fungal mold on underside during high humidity, rapid blighting of entire plant.",
+      "cultural_management": "Avoid overhead sprinkler irrigation; ensure wide spacing and clean bund drainage; destroy infected haulms immediately.",
+      "biological_control": "Prophylactic application of bio-formulation Trichoderma viride.",
+      "chemical_control": "Prophylactic: Mancozeb 75% WP @ 2.5 g/L. Curative: Cymoxanil 8% + Mancozeb 64% WP @ 3 g/L or Metalaxyl 8% + Mancozeb 64% WP @ 2.5 g/L.",
+      "official_source": "ICAR-CPRI Shimla & UAS Dharwad Plant Pathology Guidelines"
+    },
+    "Tomato Yellow Leaf Curl Virus": {
+      "pathogen": "Tomato Yellow Leaf Curl Virus (TYLCV - Begomovirus) transmitted by Whitefly (Bemisia tabaci)",
+      "crop": "Tomato",
+      "symptoms": "Upward curling and cupping of leaflet margins, severe stunting of plants, yellowing between veins, flower drop with no fruit set.",
+      "cultural_management": "Erect yellow sticky traps (15-20 traps/acre) to monitor and mass-trap whiteflies; remove and destroy symptomatic early infected plants; plant border rows of maize or sorghum (3-4 rows) as physical barrier.",
+      "biological_control": "Spray Neem oil 1500 ppm @ 3-5 ml/L or Lecanicillium lecanii @ 5 g/L to suppress whitefly nymphs.",
+      "chemical_control": "Spray Diafenthiuron 50% WP @ 1.2 g/L or Imidacloprid 17.8% SL @ 0.4 ml/L to control vector whiteflies.",
+      "official_source": "ICAR-IIHR Bangalore Vector Management Advisory"
+    },
+    "Tomato with Bacterial Spot": {
+      "pathogen": "Xanthomonas perforans / euvesicatoria (Bacteria)",
+      "crop": "Tomato & Bell Pepper",
+      "symptoms": "Small (2-3 mm) dark brown, water-soaked circular to angular lesions on leaves, often surrounded by yellow halos, causing defoliation and blister-like scab fruit spots.",
+      "cultural_management": "Use certified disease-free seeds; treat seeds with hot water (50°C for 25 min); avoid handling wet foliage.",
+      "biological_control": "Seed treatment with Pseudomonas fluorescens @ 10g/kg seed + foliar spray @ 5g/L.",
+      "chemical_control": "Spray Copper Oxychloride 50% WP @ 2.5 g/L mixed with Streptocycline @ 0.1 g/L (1 g in 10 liters water) at 10-12 day intervals.",
+      "official_source": "ICAR-IARI Bacteriology Division & DPPQS Guidelines"
+    },
+    "Corn (Maize) with Common Rust": {
+      "pathogen": "Puccinia sorghi (Fungus)",
+      "crop": "Corn (Maize)",
+      "symptoms": "Golden-brown to cinnamon-brown powdery pustules (uredinia) scattered on both upper and lower leaf surfaces, becoming brownish-black as plant matures.",
+      "cultural_management": "Plant rust-resistant hybrids; destroy volunteer maize plants in surrounding fields.",
+      "biological_control": "Foliar spray with Bacillus subtilis @ 5g/L.",
+      "chemical_control": "Spray Mancozeb 75% WP @ 2.5 g/L or Azoxystrobin 18.2% + Difenoconazole 11.4% SC @ 1 ml/L at first appearance of pustules.",
+      "official_source": "ICAR-IIMR Ludhiana (Indian Institute of Maize Research)"
+    },
+    "Corn (Maize) with Northern Leaf Blight": {
+      "pathogen": "Exserohilum turcicum (Fungus)",
+      "crop": "Corn (Maize)",
+      "symptoms": "Long, elliptical, grayish-green or tan lesions (3 to 15 cm long) with distinctive cigar-shaped borders running parallel to leaf veins.",
+      "cultural_management": "Deep summer plowing to bury crop residues; rotate with non-host crops like pulses or cotton.",
+      "biological_control": "Seed treatment with Trichoderma asperellum @ 6g/kg seed.",
+      "chemical_control": "Spray Propiconazole 25% EC @ 1 ml/L or Mancozeb 75% WP @ 2.5 g/L at knee-high and tasseling stages.",
+      "official_source": "ICAR-IIMR & UAS Raichur Maize Pathology Advisory"
+    },
+    "Potato with Early Blight": {
+      "pathogen": "Alternaria solani (Fungus)",
+      "crop": "Potato",
+      "symptoms": "Dark brown circular spots with concentric rings on lower leaves, spread upward; leaves wither and dry like parchment.",
+      "cultural_management": "Maintain balanced nitrogen fertilization (excess or deficiency aggravates disease); avoid sprinkler irrigation in evenings.",
+      "biological_control": "Foliar spray of Trichoderma harzianum @ 5g/L.",
+      "chemical_control": "Spray Mancozeb 75% WP @ 2.5 g/L or Fenamidone 10% + Mancozeb 50% WG @ 2.5 g/L.",
+      "official_source": "ICAR-Central Potato Research Institute (CPRI)"
+    },
+    "Potato with Late Blight": {
+      "pathogen": "Phytophthora infestans (Oomycete)",
+      "crop": "Potato",
+      "symptoms": "Water-soaked lesions expanding rapidly into black blighted patches with white downy growth on undersides during cool, cloudy, humid weather.",
+      "cultural_management": "Plant certified seed tubers; dehaulm crop 10-12 days before harvesting to prevent tuber infection.",
+      "biological_control": "Trichoderma viride seed treatment @ 4g/kg seed.",
+      "chemical_control": "Prophylactic: Mancozeb 75% WP @ 2.5 g/L. Contact + Systemic: Dimethomorph 50% WP @ 1 g/L + Mancozeb 2 g/L.",
+      "official_source": "ICAR-CPRI Shimla National Late Blight Advisory"
+    },
+    "Apple Scab": {
+      "pathogen": "Venturia inaequalis (Fungus)",
+      "crop": "Apple",
+      "symptoms": "Olive-green, velvety, circular spots with feathery margins on leaves and fruits, later becoming dark brown and corky.",
+      "cultural_management": "Rake and destroy fallen leaves in autumn; apply 5% Urea spray on orchard floor before leaf fall to accelerate decomposition of overwintering perithecia.",
+      "chemical_control": "Pre-bloom spray of Dodine 65% WP @ 0.75 g/L; post-bloom spray of Difenoconazole 25% EC @ 0.3 ml/L or Captan 50% WP @ 2 g/L.",
+      "official_source": "ICAR-CITH Srinagar (Central Institute of Temperate Horticulture)"
+    },
+    "Grape with Black Rot": {
+      "pathogen": "Guignardia bidwellii (Fungus)",
+      "crop": "Grape",
+      "symptoms": "Reddish-brown circular spots on leaves; berries shrivel into hard, black, wrinkled mummies covered with tiny black pycnidia.",
+      "cultural_management": "Prune and destroy infected mummified berries and canes during winter; maintain open canopy for sun exposure and ventilation.",
+      "chemical_control": "Spray Mancozeb 75% WP @ 2.5 g/L or Azoxystrobin 23% SC @ 1 ml/L or Kresoxim-methyl 44.3% SC @ 0.7 ml/L.",
+      "official_source": "ICAR-NRC Grapes Pune (National Research Centre for Grapes)"
+    }
+  }
+}

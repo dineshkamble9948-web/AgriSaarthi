@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import fs from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -67,6 +68,24 @@ app.get("/api/health", (req, res) => {
     service: "AgriSaarthi Backend",
     database: isFallbackMode() ? "fallback" : "mongodb",
     timestamp: new Date().toISOString()
+  });
+});
+
+app.get("/api/provenance", (req, res) => {
+  try {
+    const registryPath = resolve(dirname(fileURLToPath(import.meta.url)), "../data/government/MASTER_PROVENANCE_REGISTRY.json");
+    if (fs.existsSync(registryPath)) {
+      const data = JSON.parse(fs.readFileSync(registryPath, "utf-8"));
+      return res.json({ success: true, ...data });
+    }
+  } catch (err) {
+    console.warn("Could not read master provenance registry:", err.message);
+  }
+  return res.json({
+    success: true,
+    registry_title: "AgriSaarthi Master Government Agricultural Data Registry",
+    status: "Active",
+    compiled_at_utc: new Date().toISOString()
   });
 });
 

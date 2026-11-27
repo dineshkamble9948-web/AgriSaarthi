@@ -34,7 +34,9 @@ export const listOfficers = async (req, res) => {
       total: officers.length,
       filter: { district: targetDistrict, taluk: targetTaluk, category },
       officers,
-      data: officers
+      data: officers,
+      disclaimer: "Contacts represent verified public agricultural extension offices. Officer postings may vary periodically. For 24/7 nationwide telephone assistance in Kannada or English, contact the Kisan Call Center at 1800-180-1551.",
+      provenance: "Department of Agriculture, Government of Karnataka (agri.karnataka.gov.in) & ICAR-ATARI KVK Directory."
     });
   } catch (error) {
     console.error("Officers directory lookup error:", error);
