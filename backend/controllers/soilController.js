@@ -180,7 +180,12 @@ export const getFertilizerRecommendations = async (req, res) => {
     longitude,
     soilPh = null,
     laboratoryNPK,
-    crop
+    crop,
+    cropGrowthStage,
+    landArea,
+    areaUnit,
+    isActualSoilTest,
+    district
   } = req.body;
   let scope;
   try {
@@ -193,10 +198,19 @@ export const getFertilizerRecommendations = async (req, res) => {
     return res.status(scope.statusCode).json({ success: false, message: scope.error });
   }
 
+  const effectiveArea = landArea || scope.plot?.area || scope.farm?.area || 1;
+  const effectiveUnit = areaUnit || scope.plot?.areaUnit || scope.farm?.areaUnit || "acres";
+  const effectiveDistrict = district || scope.farm?.district || "Raichur";
+
   const recommendation = createFertilizerRecommendation({
     crop: crop.trim(),
     soilPh,
-    laboratoryNPK
+    laboratoryNPK,
+    cropGrowthStage: cropGrowthStage || "Basal / Sowing",
+    landArea: Number(effectiveArea),
+    areaUnit: effectiveUnit,
+    isActualSoilTest: isActualSoilTest !== false,
+    district: effectiveDistrict
   });
   const reportFields = {
     location: { latitude, longitude },

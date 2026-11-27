@@ -1,8 +1,10 @@
 import Farm from "../models/Farm.js";
+import FarmPlot from "../models/FarmPlot.js";
 import WeatherHistory from "../models/WeatherHistory.js";
 import {
   createWeatherHistoryEntry,
   findFarmByIdAndOwner,
+  findFarmPlotById,
   isFallbackMode,
   listWeatherHistoryByFarm
 } from "../config/fallbackStore.js";
@@ -47,6 +49,7 @@ export const getWeather = async (req, res) => {
   const location = typeof req.query.location === "string" ? req.query.location.trim() : "";
   const state = typeof req.query.state === "string" ? req.query.state.trim() : "";
   const farmId = typeof req.query.farmId === "string" ? req.query.farmId.trim() : "";
+  const plotId = typeof req.query.plotId === "string" ? req.query.plotId.trim() : "";
   const latitudeProvided = hasQueryValue(req.query.latitude);
   const longitudeProvided = hasQueryValue(req.query.longitude);
 
@@ -62,10 +65,10 @@ export const getWeather = async (req, res) => {
       message: "Provide both latitude and longitude."
     });
   }
-  if (!farmId && !location && !latitudeProvided) {
+  if (!farmId && !plotId && !location && !latitudeProvided) {
     return res.status(400).json({
       success: false,
-      message: "Provide a farm ID, location, or latitude and longitude."
+      message: "Provide a farm ID, plot ID, location, or latitude and longitude."
     });
   }
 
@@ -78,13 +81,28 @@ export const getWeather = async (req, res) => {
   }
 
   try {
-    const farm = farmId ? await findOwnedFarm(farmId, req.user._id) : null;
+    let plot = null;
+    if (plotId) {
+      plot = isFallbackMode()
+        ? findFarmPlotById(plotId, req.user._id)
+        : await FarmPlot.findOne({ _id: plotId, owner: req.user._id });
+    }
+
+    const effectiveFarmId = farmId || (plot?.farm ? String(plot.farm) : "");
+    const farm = effectiveFarmId ? await findOwnedFarm(effectiveFarmId, req.user._id) : null;
     if (farmId && !farm) {
       return res.status(404).json({ success: false, message: "Farm not found." });
     }
 
     let weather;
-    if (farm && Number.isFinite(farm.latitude) && Number.isFinite(farm.longitude)) {
+    if (plot && Number.isFinite(plot.latitude) && Number.isFinite(plot.longitude)) {
+      weather = await getWeatherForCoordinates(
+        plot.latitude,
+        plot.longitude,
+        apiKey,
+        plot.plotName
+      );
+    } else if (farm && Number.isFinite(farm.latitude) && Number.isFinite(farm.longitude)) {
       weather = await getWeatherForCoordinates(
         farm.latitude,
         farm.longitude,
@@ -98,12 +116,12 @@ export const getWeather = async (req, res) => {
         apiKey
       );
     } else {
-      const weatherLocation = farm?.location || location;
+      const weatherLocation = plot?.locationName || farm?.location || location;
       const weatherState = farm?.state || state;
       if (!weatherLocation) {
         return res.status(400).json({
           success: false,
-          message: "This farm has no saved coordinates or location for weather lookup."
+          message: "This farm or plot has no saved coordinates or location for weather lookup."
         });
       }
       weather = await getWeatherForLocation(weatherLocation, weatherState, apiKey);
@@ -112,7 +130,32 @@ export const getWeather = async (req, res) => {
     if (farm) {
       await saveWeatherSnapshot(req.user._id, farm, weather);
     }
-    return res.status(200).json({ success: true, weather });
+
+    // Generate intelligent cross-signals
+    const temp = weather.current?.temperatureC;
+    const humidity = weather.current?.humidityPercent;
+    const rainForecast = Array.isArray(weather.forecast)
+      ? weather.forecast.reduce((sum, f) => sum + (f.rainMm || 0), 0)
+      : 0;
+
+    const crossSignals = {
+      irrigationAdvisory: rainForecast >= 1.5
+        ? "Postpone irrigation: Forecast indicates upcoming precipitation."
+        : "Standard irrigation: Adequate soil moisture check advised.",
+      diseaseRisk: (humidity >= 75 && temp >= 20 && temp <= 32)
+        ? "Elevated fungal risk: Warm temperature and high humidity favor pathogen development."
+        : "Low disease risk from prevailing weather conditions.",
+      extremeAlerts: []
+    };
+
+    if (temp >= 38) crossSignals.extremeAlerts.push("Heatwave Advisory: Ensure protective mulching and light irrigation.");
+    if (weather.current?.windSpeedKmh >= 35) crossSignals.extremeAlerts.push("High Wind Warning: Check field staking and avoid foliar spraying.");
+
+    return res.status(200).json({
+      success: true,
+      weather,
+      crossSignals
+    });
   } catch (error) {
     if (error instanceof WeatherProviderError) {
       return res.status(error.statusCode).json({
