@@ -5,6 +5,10 @@ import useWeather from "../hooks/useWeather";
 import formatWeatherTime from "../utils/formatWeatherTime";
 import SoilIntelligence from "./SoilIntelligence";
 import DigitalTwinDashboard from "./DigitalTwinDashboard";
+import GovernmentSchemesPanel from "./GovernmentSchemesPanel";
+import AgriculturalOfficersPanel from "./AgriculturalOfficersPanel";
+import FarmingCalendarPanel from "./FarmingCalendarPanel";
+import FarmHealthReportPanel from "./FarmHealthReportPanel";
 import {
   Bar,
   BarChart,
@@ -39,7 +43,11 @@ import {
   Info,
   FileSpreadsheet,
   MapPin,
-  Award
+  Award,
+  CalendarDays,
+  FileCheck,
+  Landmark,
+  PhoneCall
 } from "lucide-react";
 
 const moduleDetails = {
@@ -87,6 +95,26 @@ const moduleDetails = {
     icon: TrendingUp,
     description: "Compare the latest mandi prices and review historical commodity price movement.",
     features: ["Daily mandi prices", "State, district, commodity, market and date filters", "Market comparisons", "Arrival-date price trends"]
+  },
+  "Government Schemes": {
+    icon: Landmark,
+    description: "Discover central and Karnataka state agricultural subsidies, DBT incentives, and assistance programs tailored to your landholding.",
+    features: ["PM-KISAN and Raitha Siri matching", "Subsidies for drip and equipment", "Eligibility verification", "Direct official portal application"]
+  },
+  "Agricultural Expert Support": {
+    icon: PhoneCall,
+    description: "Direct contact directory of Raitha Samparka Kendra (RSK) officers, KVK scientists, and district agricultural authorities across Karnataka.",
+    features: ["Raitha Samparka Kendra (AAO) contacts", "KVK scientist advisory", "1-click direct phone dial & directions", "24/7 Kisan Call Center helpline"]
+  },
+  "Farming Calendar": {
+    icon: CalendarDays,
+    description: "Stage-by-stage agronomic timeline and fertilizer/irrigation interventions based on UAS Raichur & ICAR package of practices.",
+    features: ["Crop-specific timelines (Cotton, Paddy, Chickpea, Maize)", "Stage-wise fertilizer & pest tasks", "Progress tracking checklist", "Synchronized with sowing dates"]
+  },
+  "Farm Health Report": {
+    icon: FileCheck,
+    description: "Generate and export a comprehensive, printable plot health report uniting soil, weather, fertilizer doses, and irrigation guidance.",
+    features: ["Overall plot health scoring", "Official UAS Raichur dosage calculations", "Print & PDF export ready", "Suitable for RSK / KVK consultation"]
   }
 };
 
@@ -2591,7 +2619,11 @@ const moduleContentMap = {
   "Farm Digital Twin": DigitalTwinPanel,
   "What-If Simulation": WhatIfPanel,
   "Next Best Action": NextBestActionPanel,
-  "Market Intelligence": MarketPanel
+  "Market Intelligence": MarketPanel,
+  "Government Schemes": GovernmentSchemesPanel,
+  "Agricultural Expert Support": AgriculturalOfficersPanel,
+  "Farming Calendar": FarmingCalendarPanel,
+  "Farm Health Report": FarmHealthReportPanel
 };
 
 export default function ModulePage({ page, setActivePage, farm, onFarmUpdated }) {

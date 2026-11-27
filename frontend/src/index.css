@@ -4108,3 +4108,49 @@ input:focus, select:focus, textarea:focus {
     flex-direction: column-reverse;
   }
 }
+
+/* Mobile Bottom Navigation & Touch Targets */
+@media (min-width: 769px) {
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding-bottom: 80px !important;
+  }
+  .app-footer {
+    margin-bottom: 64px !important;
+  }
+}
+
+/* Farm Health Report Print & PDF Formatting */
+@media print {
+  .no-print,
+  .sidebar,
+  .app-header,
+  .app-footer,
+  .mobile-bottom-nav,
+  .back-button,
+  .module-hero,
+  .module-feature-panel {
+    display: none !important;
+  }
+
+  .main-content,
+  .dashboard,
+  .module-page,
+  .printable-report-sheet {
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+}

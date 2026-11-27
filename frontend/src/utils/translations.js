@@ -13,6 +13,10 @@ export const translations = {
     "What-If Simulation": "What-If Simulation",
     "Next Best Action": "Next Best Action",
     "Market Intelligence": "Market Intelligence",
+    "Government Schemes": "Government Schemes",
+    "Agricultural Expert Support": "Agricultural Expert Support",
+    "Farming Calendar": "Farming Calendar",
+    "Farm Health Report": "Farm Health Report",
 
     // Branding
     appName: "AgriSaarthi",
@@ -107,6 +111,10 @@ export const translations = {
     "What-If Simulation": "ವಾಟ್-ಇಫ್ ಸಿಮ್ಯುಲೇಶನ್ (What-If)",
     "Next Best Action": "ಮುಂದಿನ ಅತ್ಯುತ್ತಮ ಕ್ರಮ (Next Best Action)",
     "Market Intelligence": "ಮಾರುಕಟ್ಟೆ ದರಗಳು (Market Mandi)",
+    "Government Schemes": "ಸರ್ಕಾರಿ ಯೋಜನೆಗಳು (Govt Schemes)",
+    "Agricultural Expert Support": "ಕೃಷಿ ಅಧಿಕಾರಿಗಳ ಸಂಪರ್ಕ (Expert Support)",
+    "Farming Calendar": "ಕೃಷಿ ವೇಳಾಪಟ್ಟಿ (Farming Calendar)",
+    "Farm Health Report": "ಜಮೀನಿನ ಆರೋಗ್ಯ ವರದಿ (Health Report)",
 
     // Branding
     appName: "ಕೃಷಿ ಸಾರಥಿ (AgriSaarthi)",

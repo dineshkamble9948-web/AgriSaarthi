@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
+import MobileBottomNav from "./components/MobileBottomNav";
 import Dashboard from "./pages/Dashboard";
 import ModulePage from "./pages/ModulePage";
 import AuthPage from "./pages/AuthPage";
@@ -124,6 +125,8 @@ function App() {
           © 2026 AgriSaarthi. Smart farming for a better tomorrow.
         </footer>
       </main>
+
+      <MobileBottomNav activePage={activePage} setActivePage={setActivePage} />
     </div>
   );
 }

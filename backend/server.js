@@ -14,6 +14,11 @@ import marketRoutes from "./routes/marketRoutes.js";
 import cropRecommendationRoutes from "./routes/cropRecommendationRoutes.js";
 import weatherRoutes from "./routes/weatherRoutes.js";
 import soilRoutes from "./routes/soilRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
+import schemeRoutes from "./routes/schemeRoutes.js";
+import officerRoutes from "./routes/officerRoutes.js";
+import calendarRoutes from "./routes/calendarRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
 
 dotenv.config({ path: resolve(dirname(fileURLToPath(import.meta.url)), ".env") });
 
@@ -73,6 +78,11 @@ app.use("/api/market", marketRoutes);
 app.use("/api/crops", cropRecommendationRoutes);
 app.use("/api/weather", weatherRoutes);
 app.use("/api/soil", soilRoutes);
+app.use("/api/plots", dashboardRoutes);
+app.use("/api/schemes", schemeRoutes);
+app.use("/api/officers", officerRoutes);
+app.use("/api/calendar", calendarRoutes);
+app.use("/api/reports", reportRoutes);
 
 app.use((err, req, res, next) => {
   console.error("Unhandled server error:", err);

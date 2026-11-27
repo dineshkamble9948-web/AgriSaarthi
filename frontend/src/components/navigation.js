@@ -1,11 +1,15 @@
 import {
   Calculator,
+  CalendarDays,
   CloudSun,
+  FileCheck,
   FlaskConical,
   History,
+  Landmark,
   LayoutDashboard,
   Lightbulb,
   Map,
+  PhoneCall,
   ScanSearch,
   Sprout,
   TrendingUp
@@ -19,7 +23,9 @@ const navigation = [
       { name: "Crop Recommendation", icon: Sprout },
       { name: "Disease Detection", icon: ScanSearch },
       { name: "Weather Intelligence", icon: CloudSun },
-      { name: "Fertilizer & Soil", icon: FlaskConical }
+      { name: "Fertilizer & Soil", icon: FlaskConical },
+      { name: "Farming Calendar", icon: CalendarDays },
+      { name: "Farm Health Report", icon: FileCheck }
     ]
   },
   {
@@ -29,7 +35,9 @@ const navigation = [
       { name: "Farm Digital Twin", icon: Map },
       { name: "What-If Simulation", icon: Calculator },
       { name: "Next Best Action", icon: Lightbulb },
-      { name: "Market Intelligence", icon: TrendingUp }
+      { name: "Market Intelligence", icon: TrendingUp },
+      { name: "Government Schemes", icon: Landmark },
+      { name: "Agricultural Expert Support", icon: PhoneCall }
     ]
   }
 ];
