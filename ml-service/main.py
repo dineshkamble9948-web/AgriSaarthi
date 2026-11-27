@@ -22,6 +22,13 @@ from disease_detection import (
     load_disease_model,
     predict_disease_mobilenet,
 )
+from karnataka_engine import (
+    list_karnataka_districts,
+    list_karnataka_taluks,
+    get_regional_soil_profile,
+    get_regional_rainfall,
+    enhance_crop_recommendation,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +72,10 @@ class CropRecommendationRequest(BaseModel):
     humidity: float = Field(ge=0, le=100)
     ph: float = Field(ge=0, le=14)
     rainfall: float = Field(ge=0, le=5000)
+    district: str | None = None
+    taluk: str | None = None
+    season: str | None = None
+    is_actual_soil_test: bool = False
 
 
 def _get_crop_model() -> dict[str, Any]:
@@ -189,15 +200,61 @@ def model_info() -> dict[str, Any]:
     }
 
 
+@app.get("/karnataka/districts")
+def get_karnataka_districts() -> dict[str, Any]:
+    districts = list_karnataka_districts()
+    return {"success": True, "state": "Karnataka", "districts": districts, "count": len(districts)}
+
+
+@app.get("/karnataka/taluks")
+def get_karnataka_taluks(district: str) -> dict[str, Any]:
+    taluks = list_karnataka_taluks(district)
+    return {"success": True, "district": district, "taluks": taluks, "count": len(taluks)}
+
+
+@app.get("/karnataka/soil")
+def get_karnataka_soil(district: str, taluk: str | None = None) -> dict[str, Any]:
+    soil_profile = get_regional_soil_profile(district, taluk)
+    return {"success": True, "soil_profile": soil_profile}
+
+
+@app.get("/karnataka/rainfall")
+def get_karnataka_rainfall(district: str, taluk: str | None = None) -> dict[str, Any]:
+    rainfall_profile = get_regional_rainfall(district, taluk)
+    return {"success": True, "rainfall_profile": rainfall_profile}
+
+
 @app.post("/recommend")
 def recommend(request: CropRecommendationRequest) -> dict[str, Any]:
     bundle = _get_crop_model()
     features = request.model_dump(by_alias=True)
-    recommendations = predict_top_three(bundle, features)
+    raw_recommendations = predict_top_three(bundle, features)
+
+    if request.district:
+        enhanced = enhance_crop_recommendation(
+            ml_recommendations=raw_recommendations,
+            district=request.district,
+            taluk=request.taluk,
+            season=request.season,
+            user_inputs=features,
+            is_actual_soil_test=request.is_actual_soil_test,
+        )
+        return {
+            "success": True,
+            "recommendations": raw_recommendations,
+            "enhanced_recommendations": enhanced["top_three_recommendations"],
+            "location": enhanced["location"],
+            "selected_season": enhanced["selected_season"],
+            "regional_soil_profile": enhanced["regional_soil_profile"],
+            "regional_rainfall_profile": enhanced["regional_rainfall_profile"],
+            "soil_health_deficiencies": enhanced["soil_health_deficiencies"],
+            "soil_management_suggestions": enhanced["soil_management_suggestions"],
+            "score_note": bundle["metadata"]["score_note"],
+        }
 
     return {
         "success": True,
-        "recommendations": recommendations,
+        "recommendations": raw_recommendations,
         "score_note": bundle["metadata"]["score_note"],
     }
 

@@ -1,0 +1,64 @@
+{
+  "title": "AgriSaarthi Karnataka Agricultural Knowledge Base",
+  "description": "Integrated government agricultural datasets covering Soil Health, District Crop Production, and Meteorological Rainfall across Karnataka",
+  "generated_at_utc": "2026-11-27T06:03:47.100334+00:00",
+  "datasets": {
+    "soil_health_karnataka": {
+      "source": "DAC&FW National Soil Health Card Portal (https://soilhealth.dac.gov.in/) & NFSM Karnataka Soil Survey",
+      "raw_file": "data/raw/soil_health_karnataka.csv",
+      "processed_file": "data/processed/clean_soil_data.csv",
+      "parameters": [
+        "Nitrogen (kg/ha)",
+        "Phosphorus (kg/ha)",
+        "Potassium (kg/ha)",
+        "Soil pH",
+        "Organic Carbon (%)",
+        "Sulphur (ppm)",
+        "Zinc (ppm)",
+        "Iron (ppm)",
+        "Boron (ppm)",
+        "Copper (ppm)",
+        "Manganese (ppm)"
+      ],
+      "geographical_hierarchy": [
+        "State",
+        "District",
+        "Taluk",
+        "Village"
+      ],
+      "districts_covered": 31
+    },
+    "crop_production_karnataka": {
+      "source": "Directorate of Economics and Statistics (DES), Ministry of Agriculture & Farmers Welfare (https://data.desagri.gov.in/)",
+      "raw_file": "data/raw/crop_production_karnataka.csv",
+      "processed_file": "data/processed/clean_crop_production.csv",
+      "parameters": [
+        "State",
+        "District",
+        "Crop_Year",
+        "Season",
+        "Crop",
+        "Area (ha)",
+        "Production (tonnes)",
+        "Yield (tonnes/ha)"
+      ],
+      "years_covered": "1997-2014 historical census series",
+      "districts_covered": 30
+    },
+    "rainfall_karnataka": {
+      "source": "India Meteorological Department (IMD) District Normal Series & Karnataka State Natural Disaster Monitoring Centre (KSNDMC)",
+      "raw_file": "data/raw/rainfall_karnataka.csv",
+      "processed_file": "data/processed/clean_rainfall.csv",
+      "parameters": [
+        "District",
+        "Taluk",
+        "Annual Normal Rainfall (mm)",
+        "Kharif (Jun-Sep) mm",
+        "Rabi (Oct-Dec) mm",
+        "Summer (Mar-May) mm",
+        "Winter (Jan-Feb) mm"
+      ],
+      "districts_covered": 31
+    }
+  }
+}

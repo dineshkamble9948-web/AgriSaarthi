@@ -1,0 +1,17 @@
+### 1. Direct OpenWeather API Test (No Backend Required)
+GET https://api.openweathermap.org/data/2.5/weather?q=Bangalore,Karnataka,IN&appid=309e3e7df1837d5086748a4231e93882&units=metric
+
+### 2. Login to AgriSaarthi Local Backend to get JWT Token
+# @name login
+POST http://localhost:5000/api/auth/demo-login
+Content-Type: application/json
+
+### 3. Test AgriSaarthi Weather API via Backend (Using Token from Step 2)
+@authToken = {{login.response.body.token}}
+
+GET http://localhost:5000/api/weather?location=Bangalore&state=Karnataka
+Authorization: Bearer {{authToken}}
+
+### 4. Test AgriSaarthi Weather by Geographic Coordinates (Lat / Lon)
+GET http://localhost:5000/api/weather?latitude=12.9716&longitude=77.5946
+Authorization: Bearer {{authToken}}
