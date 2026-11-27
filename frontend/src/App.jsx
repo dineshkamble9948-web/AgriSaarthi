@@ -16,7 +16,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [farm, setFarm] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [authInitialMode, setAuthInitialMode] = useState("register");
+  const [authInitialMode, setAuthInitialMode] = useState("login");
   const [activePage, setActivePage] = useState("Dashboard");
   const [mobileOpen, setMobileOpen] = useState(false);
 
